@@ -3,10 +3,10 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 import torch
-from torch import optim
+from torch    import optim
 from torch.nn import functional as F
 
-from data import get_m4_data, dummy_data_generator
+from data                 import get_m4_data, dummy_data_generator
 from nbeats_pytorch.model import NBeatsNet
 
 CHECKPOINT_NAME = 'nbeats-training-checkpoint.th'
@@ -41,31 +41,34 @@ def batcher(dataset, batch_size, infinite=False):
 
 
 def main():
-    args = get_script_arguments()
-    device = torch.device('cuda') if not args.disable_cuda and torch.cuda.is_available() else torch.device('cpu')
+    args            = get_script_arguments()
+    device          = torch.device('cuda') if not args.disable_cuda and torch.cuda.is_available() else torch.device('cpu')
     forecast_length = 10
     backcast_length = 5 * forecast_length
-    batch_size = 4  # greater than 4 for viz
+    batch_size      = 4  # greater than 4 for viz
 
     if args.task == 'm4':
         data_gen = batcher(get_m4_data(backcast_length, forecast_length), batch_size=batch_size, infinite=True)
     elif args.task == 'dummy':
         data_gen = dummy_data_generator(backcast_length, forecast_length,
-                                        signal_type='seasonality', random=True,
-                                        batch_size=batch_size)
+                                        signal_type = 'seasonality', 
+                                        random      = True,
+                                        batch_size  = batch_size)
     else:
         raise Exception('Unknown task.')
 
     print('--- Model ---')
-    net = NBeatsNet(device=device,
-                    stack_types=[NBeatsNet.TREND_BLOCK, NBeatsNet.SEASONALITY_BLOCK, NBeatsNet.GENERIC_BLOCK],
-                    forecast_length=forecast_length,
-                    thetas_dim=[2, 8, 3],
-                    nb_blocks_per_stack=3,
-                    backcast_length=backcast_length,
-                    hidden_layer_units=1024,
-                    share_weights_in_stack=False,
-                    nb_harmonics=None)
+    net = NBeatsNet(device                 = device,
+                    stack_types            = [NBeatsNet.TREND_BLOCK, 
+                                              NBeatsNet.SEASONALITY_BLOCK, 
+                                              NBeatsNet.GENERIC_BLOCK],
+                    forecast_length        = forecast_length,
+                    thetas_dim             = [2, 8, 3],
+                    nb_blocks_per_stack    = 3,
+                    backcast_length        = backcast_length,
+                    hidden_layer_units     = 1024,
+                    share_weights_in_stack = False,
+                    nb_harmonics           = None)
 
     optimiser = optim.Adam(net.parameters())
 
@@ -81,7 +84,10 @@ def main():
     simple_fit(net, optimiser, data_gen, plot_model, device, max_grad_steps)
 
 
-def simple_fit(net, optimiser, data_generator, on_save_callback=None, device=torch.device('cpu'), max_grad_steps=10000):
+def simple_fit(net, optimiser, data_generator, 
+               on_save_callback = None, 
+               device           = torch.device('cpu'), 
+               max_grad_steps   = 10000):
     print('--- Training ---')
     initial_grad_step = load(net, optimiser)
     for grad_step, (x, target) in enumerate(data_generator):
@@ -89,7 +95,7 @@ def simple_fit(net, optimiser, data_generator, on_save_callback=None, device=tor
         optimiser.zero_grad()
         net.train()
         backcast, forecast = net(torch.tensor(x, dtype=torch.float).to(device))
-        loss = F.mse_loss(forecast, torch.tensor(target, dtype=torch.float).to(device))
+        loss               = F.mse_loss(forecast, torch.tensor(target, dtype=torch.float).to(device))
         loss.backward()
         optimiser.step()
         print(f'grad_step = {str(grad_step).zfill(6)}, loss = {loss.item():.6f}')
@@ -104,11 +110,10 @@ def simple_fit(net, optimiser, data_generator, on_save_callback=None, device=tor
 
 
 def save(model, optimiser, grad_step=0):
-    torch.save({
-        'grad_step': grad_step,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimiser.state_dict(),
-    }, CHECKPOINT_NAME)
+    torch.save({'grad_step'            : grad_step,
+                'model_state_dict'     : model.state_dict(),
+                'optimizer_state_dict' : optimiser.state_dict(),}, 
+               CHECKPOINT_NAME)
 
 
 def load(model, optimiser):

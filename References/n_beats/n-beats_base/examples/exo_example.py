@@ -23,10 +23,10 @@ def main():
     # NOTE: If you choose the Keras backend with input_dim>1, you have
     # to set the value here too (in the constructor).
     model_keras = NBeatsKeras(
-        input_dim=input_dim,
-        backcast_length=time_steps,
-        forecast_length=output_dim,
-        exo_dim=exo_dim
+        input_dim       = input_dim,
+        backcast_length = time_steps,
+        forecast_length = output_dim,
+        exo_dim         = exo_dim
     )
 
     # from keras.utils.vis_utils import plot_model

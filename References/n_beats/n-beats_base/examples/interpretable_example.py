@@ -3,10 +3,10 @@ import warnings
 
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
+import numpy             as np
 
-from examples.data import dummy_data_generator
-from nbeats_keras.model import NBeatsNet as NBeatsKeras
+from examples.data        import dummy_data_generator
+from nbeats_keras.model   import NBeatsNet as NBeatsKeras
 from nbeats_pytorch.model import NBeatsNet as NBeatsPytorch
 
 warnings.filterwarnings('ignore')
@@ -18,39 +18,50 @@ def main():
     backcast_length = 10
     forecast_length = 10
 
-    data_gen = dummy_data_generator(
-        backcast_length=backcast_length, forecast_length=forecast_length,
-        signal_type='seasonality', random=False, batch_size=32
-    )
+    data_gen = dummy_data_generator(backcast_length = backcast_length, 
+                                    forecast_length = forecast_length,
+                                    signal_type     = 'seasonality', 
+                                    random          = False, 
+                                    batch_size      = 32)
     num_samples_train = 1000
-    num_samples_test = 200
+    num_samples_test  = 200
+    
     batches = list(itertools.islice(data_gen, num_samples_train))
     x_train = np.vstack([b[0] for b in batches])
     y_train = np.vstack([b[1] for b in batches])
 
     batches = list(itertools.islice(data_gen, num_samples_test))
-    x_test = np.vstack([b[0] for b in batches])
-    y_test = np.vstack([b[1] for b in batches])
+    x_test  = np.vstack([b[0] for b in batches])
+    y_test  = np.vstack([b[1] for b in batches])
 
     sample_idx = 10
-    sample_x = x_test[sample_idx:sample_idx + 1]
-    sample_y = y_test[sample_idx]
+    sample_x   = x_test[sample_idx:sample_idx + 1]
+    sample_y   = y_test[sample_idx]
 
     for backend in [NBeatsKeras, NBeatsPytorch]:
         backend_name = backend.name()
         print(f'Running the example for {backend_name}...')
-        model = backend(
-            backcast_length=backcast_length, forecast_length=forecast_length,
-            stack_types=(NBeatsKeras.GENERIC_BLOCK, NBeatsKeras.TREND_BLOCK, NBeatsKeras.SEASONALITY_BLOCK),
-            nb_blocks_per_stack=2, thetas_dim=(4, 4, 4), hidden_layer_units=20
-        )
+        model = backend(backcast_length     = backcast_length, 
+                        forecast_length     = forecast_length,
+                        stack_types         = (NBeatsKeras.GENERIC_BLOCK, 
+                                               NBeatsKeras.TREND_BLOCK, 
+                                               NBeatsKeras.SEASONALITY_BLOCK),
+                        nb_blocks_per_stack = 2, 
+                        thetas_dim          = (4, 4, 4), 
+                        hidden_layer_units  = 20)
         model.compile(loss='mae', optimizer='adam')
-        model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=1, batch_size=32)
+        model.fit(x_train, y_train, 
+                  validation_data = (x_test, y_test), 
+                  epochs          = 1, 
+                  batch_size      = 32)
         model.enable_intermediate_outputs()
         model.predict(sample_x)  # load intermediary outputs into our model object.
         # NOTE: g_pred + i_pred = pred.
         g_pred, i_pred, outputs = model.get_generic_and_interpretable_outputs()
-        plot(target=sample_y, generic_predictions=g_pred, interpretable_predictions=i_pred, backend_name=backend_name)
+        plot(target                    = sample_y, 
+             generic_predictions       = g_pred, 
+             interpretable_predictions = i_pred, 
+             backend_name              = backend_name)
         subplots(outputs, backend_name)
     plt.show()
 

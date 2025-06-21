@@ -8,8 +8,8 @@
 
 import os
 
-import numpy as np
-import pandas as pd
+import numpy      as np
+import pandas     as pd
 import tensorflow as tf
 from tensorflow.keras.callbacks import Callback
 
@@ -19,19 +19,18 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
-zip_path = tf.keras.utils.get_file(
-    origin='https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip',
-    fname='jena_climate_2009_2016.csv.zip',
-    extract=True)
+zip_path = tf.keras.utils.get_file(origin = 'https://storage.googleapis.com/tensorflow/tf-keras-datasets/jena_climate_2009_2016.csv.zip',
+                                  fname   = 'jena_climate_2009_2016.csv.zip',
+                                  extract = True)
 csv_path, _ = os.path.splitext(zip_path)
-df = pd.read_csv(csv_path)
+df          = pd.read_csv(csv_path)
 print(csv_path)
 print(df.head())
 print(len(df))
 
 
 def univariate_data(dataset, start_index, end_index, history_size, target_size):
-    data = []
+    data   = []
     labels = []
 
     start_index = start_index + history_size
@@ -61,7 +60,7 @@ class DataNormalizer:
 
     def __init__(self, train):
         self.uni_train_mean = train.mean()
-        self.uni_train_std = train.std()
+        self.uni_train_std  = train.std()
 
     def apply(self, x):
         return (x - self.uni_train_mean) / self.uni_train_std
@@ -70,26 +69,26 @@ class DataNormalizer:
         return x * self.uni_train_std + self.uni_train_mean
 
 
-dn = DataNormalizer(train=uni_data[:TRAIN_SPLIT])
+dn             = DataNormalizer(train=uni_data[:TRAIN_SPLIT])
 uni_train_mean = uni_data[:TRAIN_SPLIT].mean()
-uni_train_std = uni_data[:TRAIN_SPLIT].std()
+uni_train_std  = uni_data[:TRAIN_SPLIT].std()
 
 uni_data = dn.apply(uni_data)
 
-univariate_past_history = 20
+univariate_past_history  = 20
 univariate_future_target = 0
 
 x_train_uni, y_train_uni = univariate_data(uni_data, 0, TRAIN_SPLIT,
                                            univariate_past_history,
                                            univariate_future_target)
-x_val_uni, y_val_uni = univariate_data(uni_data, TRAIN_SPLIT, None,
-                                       univariate_past_history,
-                                       univariate_future_target)
+x_val_uni, y_val_uni     = univariate_data(uni_data, TRAIN_SPLIT, None,
+                                           univariate_past_history,
+                                           univariate_future_target)
 
 print('x_train_uni.shape=', x_train_uni.shape)
 print('y_train_uni.shape=', y_train_uni.shape)
-print('x_val_uni.shape=', x_val_uni.shape)
-print('y_val_uni.shape=', y_val_uni.shape)
+print('x_val_uni.shape='  , x_val_uni.shape)
+print('y_val_uni.shape='  , y_val_uni.shape)
 
 b_val_uni = np.mean(x_val_uni, axis=1)[..., 0]
 print(np.mean(np.abs(b_val_uni - y_val_uni)))
@@ -100,14 +99,15 @@ print(np.mean(np.abs(b2_val_uni - y_val_uni)))
 print(np.mean(np.abs(dn.apply_inv(b2_val_uni) - dn.apply_inv(y_val_uni))))
 
 # noinspection PyArgumentEqualDefault
-m = NBeatsNet(
-    stack_types=(NBeatsNet.GENERIC_BLOCK, NBeatsNet.GENERIC_BLOCK, NBeatsNet.GENERIC_BLOCK),
-    nb_blocks_per_stack=3,
-    forecast_length=1,
-    backcast_length=univariate_past_history,
-    thetas_dim=(15, 15, 15),
-    share_weights_in_stack=False,
-    hidden_layer_units=384)
+m = NBeatsNet(stack_types            = (NBeatsNet.GENERIC_BLOCK, 
+                                        NBeatsNet.GENERIC_BLOCK, 
+                                        NBeatsNet.GENERIC_BLOCK),
+              nb_blocks_per_stack    = 3,
+              forecast_length        = 1,
+              backcast_length        = univariate_past_history,
+              thetas_dim             = (15, 15, 15),
+              share_weights_in_stack = False,
+              hidden_layer_units     = 384)
 m.compile(loss='mae', optimizer='adam')
 
 
@@ -122,5 +122,7 @@ class EvaluateModelCallback(Callback):
 
 
 m.fit(x_train_uni, y_train_uni,
-      epochs=20, validation_split=0.1, shuffle=True,
-      callbacks=[EvaluateModelCallback()])
+      epochs           = 20, 
+      validation_split = 0.1, 
+      shuffle          = True,
+      callbacks        = [EvaluateModelCallback()])

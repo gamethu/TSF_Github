@@ -1,4 +1,11 @@
-Drafts/demo_structure/data/raw/test.csv
-Drafts/demo_structure/data/raw/train.csv
-Drafts/demo_structure/data/processed/test_cleaned.csv
-Drafts/demo_structure/data/processed/train_cleaned.csv
+References/n_beats/n-beats_base/examples/__pycache__
+Drafts/demo_structure/model/1. BNB/BNB_encoded.csv
+Drafts/demo_structure/model/2. GNB/GNB_encoded.csv
+Drafts/demo_structure/model/3. MNB/MNB_encoded.csv
+Drafts/Temp Prediction/data/processed/test_cleaned.csv
+Drafts/Temp Prediction/data/processed/train_cleaned.csv
+Drafts/Temp Prediction/data/raw/train.csv
+Drafts/Temp Prediction/data/raw/test.csv
+References/n_beats/n-beats_base/nbeats_pytorch/__pycache__
+References/n_beats/n-beats_base/nbeats_keras/__pycache__
+References/n_beats/n-beats_base/examples/tempCodeRunnerFile.py

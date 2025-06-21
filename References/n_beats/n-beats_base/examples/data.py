@@ -4,7 +4,10 @@ from os import listdir
 import numpy as np
 
 
-def dummy_data_generator(backcast_length, forecast_length, signal_type='seasonality', random=False, batch_size=32):
+def dummy_data_generator(backcast_length, forecast_length, 
+                         signal_type = 'seasonality', 
+                         random      = False, 
+                         batch_size  = 32):
     def get_x_y():
         lin_space = np.linspace(-backcast_length, forecast_length, backcast_length + forecast_length)
         if random:
@@ -14,11 +17,11 @@ def dummy_data_generator(backcast_length, forecast_length, signal_type='seasonal
         if signal_type == 'trend':
             a = lin_space + offset
         elif signal_type == 'seasonality':
-            a = np.cos(2 * np.random.randint(low=1, high=3) * np.pi * lin_space)
+            a  = np.cos(2 * np.random.randint(low=1, high=3) * np.pi * lin_space)
             a += np.cos(2 * np.random.randint(low=2, high=4) * np.pi * lin_space)
             a += lin_space * offset + np.random.rand() * 0.1
         elif signal_type == 'cos':
-            a = np.cos(2 * np.pi * lin_space)
+            a  = np.cos(2 * np.pi * lin_space)
         else:
             raise Exception('Unknown signal type.')
 
@@ -72,13 +75,13 @@ def get_m4_data(backcast_length, forecast_length, is_training=True):
     for i in range(x_tl_tl.shape[0]):
         if len(x_tl_tl[i]) < backcast_length + forecast_length:
             continue
-        time_series = np.array(x_tl_tl[i])
-        time_series = [float(s) for s in time_series if s != '']
+        time_series         = np.array(x_tl_tl[i])
+        time_series         = [float(s) for s in time_series if s != '']
         time_series_cleaned = np.array(time_series)
         if is_training:
-            time_series_cleaned_forlearning_x = np.zeros((1, backcast_length))
-            time_series_cleaned_forlearning_y = np.zeros((1, forecast_length))
-            j = np.random.randint(backcast_length, time_series_cleaned.shape[0] + 1 - forecast_length)
+            time_series_cleaned_forlearning_x       = np.zeros((1, backcast_length))
+            time_series_cleaned_forlearning_y       = np.zeros((1, forecast_length))
+            j                                       = np.random.randint(backcast_length, time_series_cleaned.shape[0] + 1 - forecast_length)
             time_series_cleaned_forlearning_x[0, :] = time_series_cleaned[j - backcast_length: j]
             time_series_cleaned_forlearning_y[0, :] = time_series_cleaned[j:j + forecast_length]
         else:
@@ -95,8 +98,10 @@ def get_m4_data(backcast_length, forecast_length, is_training=True):
     return x, y
 
 
-def dummy_data_generator_multivariate(backcast_length, forecast_length, signal_type='seasonality', random=False,
-                                      batch_size=32):
+def dummy_data_generator_multivariate(backcast_length, forecast_length, 
+                                      signal_type = 'seasonality', 
+                                      random      = False,
+                                      batch_size  = 32):
     def get_x_y():
         lin_space = np.linspace(-backcast_length, forecast_length, backcast_length + forecast_length)
         if random:
@@ -106,7 +111,7 @@ def dummy_data_generator_multivariate(backcast_length, forecast_length, signal_t
         if signal_type == 'trend':
             a = lin_space + offset
         elif signal_type == 'seasonality':
-            a = np.cos(2 * np.random.randint(low=1, high=3) * np.pi * lin_space)
+            a  = np.cos(2 * np.random.randint(low=1, high=3) * np.pi * lin_space)
             a += np.cos(2 * np.random.randint(low=2, high=4) * np.pi * lin_space)
             a += lin_space * offset + np.random.rand() * 0.1
         elif signal_type == 'cos':
@@ -189,9 +194,9 @@ def get_m4_data_multivariate(backcast_length, forecast_length, is_training=True)
         time_series = [float(s) for s in time_series if s != '']
         time_series = time_series / x_max
         if is_training:
-            time_series_cleaned_forlearning_x = np.zeros((1, backcast_length))
-            time_series_cleaned_forlearning_y = np.zeros((1, forecast_length))
-            j = np.random.randint(backcast_length, time_series.shape[0] + 1 - forecast_length)
+            time_series_cleaned_forlearning_x       = np.zeros((1, backcast_length))
+            time_series_cleaned_forlearning_y       = np.zeros((1, forecast_length))
+            j                                       = np.random.randint(backcast_length, time_series.shape[0] + 1 - forecast_length)
             time_series_cleaned_forlearning_x[0, :] = time_series[j - backcast_length: j]
             time_series_cleaned_forlearning_y[0, :] = time_series[j:j + forecast_length]
         else:
@@ -210,13 +215,12 @@ def get_m4_data_multivariate(backcast_length, forecast_length, is_training=True)
 
 def process_data(filename):
     import wfdb
-    ecg_list = listdir(filename)
-    sample_list = [ecg[:-4] for ecg in ecg_list]
-    clean_sample_list = [ecg for ecg in sample_list if
-                         ecg not in ['102-0', 'ANNOTA', 'REC', 'SHA256SUMS', 'mitd', 'x_m']]
-    all_samples = np.zeros((len(clean_sample_list), 650000, 2))
+    ecg_list          = listdir(filename)
+    sample_list       = [ecg[:-4] for ecg in ecg_list]
+    clean_sample_list = [ecg      for ecg in sample_list if ecg not in ['102-0', 'ANNOTA', 'REC', 'SHA256SUMS', 'mitd', 'x_m']]
+    all_samples       = np.zeros((len(clean_sample_list), 650000, 2))
     for idx, ecg in enumerate(clean_sample_list):
-        record = wfdb.rdrecord(filename + ecg)
+        record           = wfdb.rdrecord(filename + ecg)
         all_samples[idx] = record.p_signal
 
     return all_samples
@@ -227,7 +231,7 @@ def get_kcg_data(backcast_length, forecast_length, is_training=True):
     # once downloaded should be put in ../examples/data/kcg/
 
     dataset = process_data(filename='../examples/data/kcg/')
-    x_max = np.amax(np.abs(dataset[:195, :, :]), axis=(0, 1))
+    x_max   = np.amax(np.abs(dataset[:195, :, :]), axis=(0, 1))
 
     if is_training:
         dataset = dataset[:195, :, :]
@@ -243,9 +247,9 @@ def get_kcg_data(backcast_length, forecast_length, is_training=True):
         time_series = dataset[i]
         time_series = time_series / x_max
         if is_training:
-            time_series_cleaned_forlearning_x = np.zeros((1, backcast_length, 2))
-            time_series_cleaned_forlearning_y = np.zeros((1, forecast_length, 2))
-            j = np.random.randint(backcast_length, time_series.shape[0] + 1 - forecast_length)
+            time_series_cleaned_forlearning_x    = np.zeros((1, backcast_length, 2))
+            time_series_cleaned_forlearning_y    = np.zeros((1, forecast_length, 2))
+            j                                    = np.random.randint(backcast_length, time_series.shape[0] + 1 - forecast_length)
             time_series_cleaned_forlearning_x[0] = time_series[j - backcast_length: j, :]
             time_series_cleaned_forlearning_y[0] = time_series[j:j + forecast_length, :]
         else:
@@ -294,10 +298,10 @@ def process_data_load():
             if headers:
                 headers = False
 
-    x_tl = [x_tl[i][1] for i in range(len(x_tl)) if '00:00:00' in x_tl[i][0]]
-    x_tl = [float(x_tl[i]) if x_tl[i] != '' else 0. for i in range(len(x_tl))]
+    x_tl            = [x_tl[i][1] for i in range(len(x_tl)) if '00:00:00' in x_tl[i][0]]
+    x_tl            = [float(x_tl[i]) if x_tl[i] != '' else 0. for i in range(len(x_tl))]
     x_tl[x_tl == 0] = np.mean(x_tl)
-    x_tl = np.array(x_tl)
+    x_tl            = np.array(x_tl)
 
     return x_tl
 
@@ -315,10 +319,10 @@ def process_data_gen():
             if headers:
                 headers = False
 
-    x_tl = [x_tl[i][1] for i in range(len(x_tl)) if '00:00:00' in x_tl[i][0]]
-    x_tl = [float(x_tl[i]) if x_tl[i] != '' else 0. for i in range(len(x_tl))]
+    x_tl            = [x_tl[i][1] for i in range(len(x_tl)) if '00:00:00' in x_tl[i][0]]
+    x_tl            = [float(x_tl[i]) if x_tl[i] != '' else 0. for i in range(len(x_tl))]
     x_tl[x_tl == 0] = np.mean(x_tl)
-    x_tl = np.array(x_tl)
+    x_tl            = np.array(x_tl)
 
     return x_tl
 
@@ -346,8 +350,8 @@ def get_exo_var_data(backcast_length, forecast_length):
     e1 = np.array([]).reshape(0, backcast_length)
     e2 = np.array([]).reshape(0, backcast_length)
 
-    time_series_1 = process_data_gen()
-    time_series_2 = process_data_load()
+    time_series_1                     = process_data_gen()
+    time_series_2                     = process_data_load()
     time_series_cleaned_forlearning_1 = np.zeros(
         (time_series_1.shape[0] + 1 - (backcast_length + forecast_length), backcast_length))
     time_series_cleaned_forlearning_2 = np.zeros(
@@ -365,12 +369,12 @@ def get_nrj_data(backcast_length, forecast_length, is_training=True):
     x, y = get_x_y_data(backcast_length, forecast_length)
     e1, e2 = get_exo_var_data(backcast_length, forecast_length)
 
-    x_max = np.amax(np.abs(x[:90 * x.shape[0] // 100, :, :]), axis=(0, 1))
+    x_max  = np.amax(np.abs(x[:90 * x.shape[0] // 100, :, :]), axis=(0, 1))
     e1_max = np.amax(np.abs(e1[:90 * x.shape[0] // 100, :]), axis=(0, 1))
     e2_max = np.amax(np.abs(e2[:90 * x.shape[0] // 100, :]), axis=(0, 1))
 
-    x = x / x_max
-    y = y / x_max
+    x  = x / x_max
+    y  = y / x_max
     e1 = e1 / e1_max
     e2 = e2 / e2_max
 
