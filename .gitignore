@@ -1,11 +1,73 @@
 References/n_beats/n-beats_base/examples/__pycache__
-Drafts/demo_structure/model/1. BNB/BNB_encoded.csv
-Drafts/demo_structure/model/2. GNB/GNB_encoded.csv
-Drafts/demo_structure/model/3. MNB/MNB_encoded.csv
-Drafts/Temp Prediction/data/processed/test_cleaned.csv
-Drafts/Temp Prediction/data/processed/train_cleaned.csv
-Drafts/Temp Prediction/data/raw/train.csv
-Drafts/Temp Prediction/data/raw/test.csv
+# Drafts/demo_structure/model/1. BNB/BNB_encoded.csv
+# Drafts/demo_structure/model/2. GNB/GNB_encoded.csv
+# Drafts/demo_structure/model/3. MNB/MNB_encoded.csv
+# Drafts/Temp Prediction/data/processed/test_cleaned.csv
+# Drafts/Temp Prediction/data/processed/train_cleaned.csv
+# Drafts/Temp Prediction/data/raw/train.csv
+# Drafts/Temp Prediction/data/raw/test.csv
 References/n_beats/n-beats_base/nbeats_pytorch/__pycache__
 References/n_beats/n-beats_base/nbeats_keras/__pycache__
 References/n_beats/n-beats_base/examples/tempCodeRunnerFile.py
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_SurPres_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_SurPres_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_SurPres_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalCloud_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalCloud_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalCloud_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalPre_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalPre_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_TotalPre_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_u10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_u10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_u10_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_v10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_v10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Ca Mau/.grib/CM_v10_2016_2024.grib
+#Drafts/Temp Prediction/data/raw/DATA_ERA5.zip
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_SurPres_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_SurPres_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_SurPres_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalCloud_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalCloud_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalCloud_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalPre_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalPre_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_TotalPre_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_u10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_u10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_u10_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_v10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_v10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Noi Bai/.grib/NB_v10_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_SurPres_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_SurPres_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_SurPres_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalCloud_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalCloud_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalCloud_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalPre_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalPre_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_TotalPre_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_u10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_u10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_u10_2016_2024.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_v10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_v10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/Quy Nhon/.grib/QN_v10_2016_2024.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_Press_1990_2002.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_Press_2003_2015.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_Press_2016_2024.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalCloud_1990_2002.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalCloud_2003_2015.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalCloud_2016_2024.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalPre_1990_2002.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalPre_2003_2015.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_TotalPre_2016_2024.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_u10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_u10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_u10_2016-2023.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_v10_1990_2002.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_v10_2003_2015.grib
+Drafts/Temp Prediction/data/raw/TSN/.grib/TSN_v10_2016_2023.grib
+Drafts/Temp Prediction/src/tempCodeRunnerFile.py
