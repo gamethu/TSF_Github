@@ -12,3 +12,5 @@ torch
 torchvision 
 torchaudio
 cfgrib
+xarray
+metpy
