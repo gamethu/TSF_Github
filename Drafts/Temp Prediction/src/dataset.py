@@ -31,6 +31,83 @@ def compare_df(df_A, df_B, key):
     diff_rows = merged[merged["_merge"] != "both"]
     return diff_rows
 
+def find_time_gaps(data, start_time, end_time, freq="1H"):
+    import pandas as pd
+
+    """
+    Tìm các khoảng thời gian bị thiếu hoặc không đúng freq giữa start_time và end_time trong DataFrame
+    Args:
+        data (DataFrame): dữ liệu có DatetimeIndex
+        start_time (str or Timestamp): thời gian bắt đầu
+        end_time (str or Timestamp): thời gian kết thúc
+        freq (str): tần suất mong đợi ('1H', '30min', ...)
+    Returns:
+        DataFrame với các cột: from_time, to_time, gap_duration
+    """
+
+    # Kiểm tra DatetimeIndex
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise ValueError("Data must have DatetimeIndex")
+
+    # Convert timezone cho data.index về cùng tz với start_time nếu có
+    if data.index.tz is None and pd.Timestamp(start_time).tz is not None:
+        data.index = data.index.tz_localize(pd.Timestamp(start_time).tz)
+    elif data.index.tz is not None and pd.Timestamp(start_time).tz is None:
+        data.index = data.index.tz_convert(None)
+
+    # Tạo time range chuẩn
+    expected_times = pd.date_range(start=start_time, end=end_time, freq=freq)
+
+    # Tìm missing times
+    missing_times = expected_times.difference(data.index)
+
+    # Nếu không thiếu thì trả về luôn
+    if missing_times.empty:
+        print("✅ Không có time gap.")
+        return None
+
+    # Tính các đoạn gap liên tiếp
+    gaps = []
+    current_gap = [missing_times[0]]
+
+    for t in missing_times[1:]:
+        if t - current_gap[-1] == pd.Timedelta(freq):
+            current_gap.append(t)
+        else:
+            gaps.append((current_gap[0], current_gap[-1], current_gap[-1] - current_gap[0] + pd.Timedelta(freq)))
+            current_gap = [t]
+
+    # Thêm đoạn cuối
+    if current_gap:
+        gaps.append((current_gap[0], current_gap[-1], current_gap[-1] - current_gap[0] + pd.Timedelta(freq)))
+
+    # Trả về DataFrame
+    gap_df = pd.DataFrame(gaps, columns=["from_time", "to_time", "gap_duration"])
+
+    return gap_df
+def fill_time_gaps(data, start_time, end_time, freq="1H"):
+    import pandas as pd
+
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise ValueError("Data must have DatetimeIndex")
+
+    if data.index.tz is None and pd.Timestamp(start_time).tz is not None:
+        data.index = data.index.tz_localize(pd.Timestamp(start_time).tz)
+    elif data.index.tz is not None and pd.Timestamp(start_time).tz is None:
+        data.index = data.index.tz_convert(None)
+
+    full_times = pd.date_range(start = start_time, 
+                               end   = end_time, 
+                               freq  = freq)
+
+    filled_df = data.reindex(full_times)
+
+    # Thêm lại cột time để giữ code cũ chạy được
+    filled_df = filled_df.reset_index().rename(columns={"index": "time"})
+
+    return filled_df
+
+
 # Missing data
 def ProportionMissing_aproach1(data):
     # how many total missing values do we have?
@@ -92,7 +169,7 @@ def ProportionMissing_aproach2(data):
 
     # plt.tight_layout()
     plt.show()
-def HandleMissing_aproach1(data):
+def HandleMissing_drop(data):
     cols_with_null = []
     for col in data.columns:
         if data[col].isnull().any():
@@ -100,12 +177,46 @@ def HandleMissing_aproach1(data):
 
     data = data.drop(columns=cols_with_null)
     return data
-def HandleMissing_aproach2(data):
+def HandleMissing_fillna(data, method):
+    import pandas as pd
+    import numpy as np
+
     for col in data.columns:
         if data[col].isnull().any():
-            mode_value = data[col].mode()[0]
-            data[col]  = data[col].fillna(mode_value)
+            if data[col].dtype == 'object' or data[col].dtype.name == 'category':
+                # Dữ liệu dạng categorical: fill bằng mode
+                value = data[col].mode()[0]
+                data[col] = data[col].fillna(value)
+            else:
+                # Dữ liệu số
+                if method == "mode":
+                    value = data[col].mode()[0]
+                    data[col] = data[col].fillna(value)
+                elif method == "mean":
+                    value = data[col].mean()
+                    data[col] = data[col].fillna(value)
+                elif method == "median":
+                    value = data[col].median()
+                    data[col] = data[col].fillna(value)
+                elif method == "ffill":
+                    data[col] = data[col].ffill()
+                elif method == "bfill":
+                    data[col] = data[col].bfill()
+                else:
+                    raise ValueError("Method phải là 'mode', 'mean', 'median', 'ffill' hoặc 'bfill'")
     return data
+def HandleMissing_interpolate(data, method):
+    import pandas as pd
+    
+    # Nếu index có timezone, remove timezone đi
+    if isinstance(data.index, pd.DatetimeIndex) and data.index.tz is not None:
+        data.index = data.index.tz_localize(None)
+
+    for col in data.columns:
+        if data[col].isnull().any():
+            data[col] = data[col].interpolate(method=method)
+    return data
+
 
 # Duplicate data
 def ProportionDuplicate_aproach1(data):
@@ -115,7 +226,8 @@ def ProportionDuplicate_aproach1(data):
     if total_duplicates == 0:
         print("Không có dòng trùng.")
         return
-
+    
+    print(data[duplicate_rows])
     print(f"Tổng số dòng trùng: {total_duplicates} / {len(data)} ({(total_duplicates / len(data)) * 100:.2f}%)\n")
 
     # max_len = max(len(col) for col in data.columns) + 1
@@ -156,8 +268,9 @@ def ProportionDuplicate_aproach2(data):
     plt.grid(visible=False, axis='x')
     # plt.tight_layout()
     plt.show()
-def HandleDuplicate_aproach1(data):
-    data_with_dup_dropped = data.drop_duplicates()
+def HandleDuplicate_drop(data, subset, keep):
+    data_with_dup_dropped = data.drop_duplicates(subset = subset,
+                                                 keep   = keep)
 
     # original = data.shape[0]
     # after    = data_with_dup_dropped.shape[0]
@@ -316,209 +429,190 @@ def HandleMismatch_aproach3(data, match_type):
     return data
 
 ## Outlier data
-def plot_Outlier(data, data_cols, target):
-    """
-    Với mỗi thuộc tính số trong data_cols:
-    - Hiển thị histplot phân phối giá trị theo class
-    - Hiển thị boxplot giá trị theo class
-    Mỗi thuộc tính nằm trên một hàng.
-    """
+def find_outlier(data, method):
     import numpy as np
-    import seaborn as sns
-    import matplotlib.pyplot as plt
+    import pandas as pd
 
-    num_cols = len(data_cols)
+    # Chỉ lấy các cột số
+    num_cols = data.select_dtypes(include=[np.number]).columns
 
-    ncols = 2   # histplot và boxplot
-    nrows = num_cols  # mỗi biến 1 hàng
+    for col in num_cols:
+        if method == "zscore":
+            mean = data[col].mean()
+            std  = data[col].std()
+            lower_bound = mean - 3 * std
+            upper_bound = mean + 3 * std
 
-    fig, axes = plt.subplots(
-        nrows   = nrows, 
-        ncols   = ncols, 
-        figsize = (6*ncols, 4*nrows)
-    )
+        elif method == "iqr":
+            Q1  = data[col].quantile(0.25)
+            Q3  = data[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
 
-    for i, column in enumerate(data_cols):
-        # Histplot
-        sns.histplot(
-            data = data, 
-            x    = column, 
-            hue  = target, 
-            kde  = True,
-            ax   = axes[i, 0]
-        )
-        axes[i, 0].set_title(f'Histogram: {column} by {target}')
-        axes[i, 0].grid(True)
+        elif method == "percentile":
+            lower_bound = data[col].quantile(0.01)
+            upper_bound = data[col].quantile(0.99)
 
-        # Boxplot
-        sns.boxplot(
-            data = data, 
-            x    = target,
-            y    = column,
-            ax   = axes[i, 1]
-        )
-        axes[i, 1].set_title(f'Boxplot: {column} by {target}')
-        axes[i, 1].set_xlabel(target)
-        axes[i, 1].set_ylabel(column)
-        axes[i, 1].grid(True)
+        else:
+            raise ValueError("Method phải là 'zscore', 'iqr' hoặc 'percentile'")
 
-    plt.tight_layout()
-    plt.show()
-def find_outlier_zscore(data):
-    import numpy as np
-    
-    for col in data:
-        max = data[col].mean()
-        min = data[col].std()
-        # IQR = Q3 - Q1
-        lower_bound = max - 3 * min
-        upper_bound = max + 3 * min
-
+        # Tìm index outlier
         outlier_idx = np.where((data[col] < lower_bound) | (data[col] > upper_bound))[0]
         percent = (len(outlier_idx) / data.shape[0]) * 100
         print(f"{col:20}: {len(outlier_idx)} outliers ({percent:.2f}%)")
-def remove_outliers_zscore(data, data_cols):
+def remove_outliers(data, method="zscore"):
     """
-    Remove outliers iteratively using the z-score (mean ± 3*std) method until no outliers are found.
+    Remove outliers in numerical columns using Z-score, IQR hoặc Percentile.
 
     Parameters:
     data (pd.DataFrame): The input dataframe.
-    data_cols (list): List of numeric columns to check for outliers.
+    method (str): 'zscore', 'iqr' hoặc 'percentile'
 
     Returns:
     pd.DataFrame: Dataframe after removing outliers.
     """
-    original_size = data.shape[0]
+    import numpy as np
+    import pandas as pd
 
-    # while True:
-    #     total_outliers = 0
+    original_size = data.shape[0]
     outlier_idx = set()
 
-    for col in data_cols:
-        mean = data[col].mean()
-        std  = data[col].std()
+    # Chỉ lấy các cột numeric
+    numeric_cols = data.select_dtypes(include=["number"]).columns
 
-        lower_bound = mean - 3 * std
-        upper_bound = mean + 3 * std
+    for col in numeric_cols:
+        if method == "zscore":
+            mean = data[col].mean()
+            std  = data[col].std()
+            lower_bound = mean - 3 * std
+            upper_bound = mean + 3 * std
+
+        elif method == "iqr":
+            Q1 = data[col].quantile(0.25)
+            Q3 = data[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+        elif method == "percentile":
+            lower_bound = data[col].quantile(0.01)
+            upper_bound = data[col].quantile(0.99)
+
+        else:
+            raise ValueError("Method phải là 'zscore', 'iqr' hoặc 'percentile'")
 
         idx = data[(data[col] < lower_bound) | (data[col] > upper_bound)].index
         outlier_idx.update(idx)
-        total_outliers += len(idx)
 
-    # if total_outliers == 0:
-    #     break  # không còn outlier thì thoát
+    data_cleaned = data.drop(index=outlier_idx)
 
-    data = data.drop(index=outlier_idx)
-
-    after_size = data.shape[0]
+    after_size = data_cleaned.shape[0]
     print(f"Original Data Size           : {original_size}")
     print(f"After Removing Outliers Size : {after_size}")
     print(f"Data Retained Percentage     : {after_size / original_size:.2%}")
 
-    return data
-def find_outlier_iqr(data):
-    import numpy as np
-    
-    for col in data:
-        Q1 = data[col].quantile(0.25)
-        Q3 = data[col].quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-
-        outlier_idx = np.where((data[col] < lower_bound) | (data[col] > upper_bound))[0]
-        percent = (len(outlier_idx) / data.shape[0]) * 100
-        print(f"{col:20}: {len(outlier_idx)} outliers ({percent:.2f}%)")
-def remove_outliers_iqr(data, data_cols):
+    return data_cleaned
+def winsorize_outliers(data, method="zscore"):
     """
-    Remove outliers iteratively using the IQR method until no outliers are found.
+    Capping outliers trong numerical columns bằng Z-score, IQR hoặc Percentile.
 
     Parameters:
     data (pd.DataFrame): The input dataframe.
-    data_cols (list): List of numeric columns to check for outliers.
+    method (str): 'zscore', 'iqr' hoặc 'percentile'
 
     Returns:
-    pd.DataFrame: Dataframe after removing outliers.
+    pd.DataFrame: Dataframe sau khi capping outliers.
     """
-    original_size = data.shape[0]
-
-    # while True:
-    #     total_outliers = 0
-    outlier_idx = set()  # gom index outlier từ tất cả các cột
-
-    for col in data_cols:
-        Q1 = data[col].quantile(0.25)
-        Q3 = data[col].quantile(0.75)
-        IQR = Q3 - Q1
-
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-
-        idx = data[(data[col] < lower_bound) | (data[col] > upper_bound)].index
-        outlier_idx.update(idx)
-        total_outliers += len(idx)
-
-    # if total_outliers == 0:
-    #     break  # nếu không còn outlier thì dừng
-
-    data = data.drop(index=outlier_idx)
-
-    after_size = data.shape[0]
-    print(f"Original Data Size           : {original_size}")
-    print(f"After Removing Outliers Size : {after_size}")
-    print(f"Data Retained Percentage     : {after_size / original_size:.2%}")
-
-    return data
-def find_outlier_percentile(data):
     import numpy as np
-    
-    for col in data:
-        max = data[col].quantile(0.99)
-        min = data[col].quantile(0.01)
-        # IQR = Q3 - Q1
-        lower_bound = min
-        upper_bound = max
+    import pandas as pd
 
-        outlier_idx = np.where((data[col] < lower_bound) | (data[col] > upper_bound))[0]
-        percent = (len(outlier_idx) / data.shape[0]) * 100
-        print(f"{col:20}: {len(outlier_idx)} outliers ({percent:.2f}%)")
-def remove_outliers_percentile(data, data_cols):
+    data_capped = data.copy()
+
+    # Chỉ lấy các cột numeric
+    numeric_cols = data.select_dtypes(include=["number"]).columns
+
+    for col in numeric_cols:
+        if method == "zscore":
+            mean = data_capped[col].mean()
+            std  = data_capped[col].std()
+            lower_bound = mean - 3 * std
+            upper_bound = mean + 3 * std
+
+        elif method == "iqr":
+            Q1 = data_capped[col].quantile(0.25)
+            Q3 = data_capped[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+        elif method == "percentile":
+            lower_bound = data_capped[col].quantile(0.01)
+            upper_bound = data_capped[col].quantile(0.99)
+
+        else:
+            raise ValueError("Method phải là 'zscore', 'iqr' hoặc 'percentile'")
+
+        # Capping outlier về cận
+        data_capped.loc[data_capped[col] < lower_bound, col] = lower_bound
+        data_capped.loc[data_capped[col] > upper_bound, col] = upper_bound
+
+    print(f"✅ Đã capping outliers bằng phương pháp: {method}")
+    return data_capped
+def transform_outliers(data, method="log", style="replace"):
     """
-    Remove outliers iteratively using the Percentile method until no outliers are found.
+    Transform tất cả numerical feature để giảm ảnh hưởng outlier.
 
-    Parameters:
-    data (pd.DataFrame): The input dataframe.
-    data_cols (list): List of numeric columns to check for outliers.
+    Args:
+        data (DataFrame): dữ liệu gốc.
+        method (str): 'log', 'sqrt', 'boxcox', 'yeojohnson'
+        style (str): 'replace' hoặc 'create_new'
 
     Returns:
-    pd.DataFrame: Dataframe after removing outliers.
+        DataFrame: dữ liệu sau khi transform
     """
-    original_size = data.shape[0]
+    import numpy as np
+    import pandas as pd
+    from scipy import stats
 
-    # while True:
-    #     total_outliers = 0
-    outlier_idx = set()  # dùng set để tránh trùng index
-    
-    for col in data_cols:
-        lower_bound = data[col].quantile(0.01)
-        upper_bound = data[col].quantile(0.99)
+    data_transformed = data.copy()
 
-        # Tìm outlier và cộng vào set
-        idx = data[(data[col] < lower_bound) | (data[col] > upper_bound)].index
-        outlier_idx.update(idx)
-        total_outliers += len(idx)
+    # Tự động lấy các numeric columns
+    num_cols = data.select_dtypes(include=["number"]).columns
 
-    # if total_outliers == 0:
-    #     break  # không còn outlier thì thoát
-    
-    data = data.drop(index=outlier_idx)
+    for col in num_cols:
+        try:
+            if method == "log":
+                transformed = np.log1p(data_transformed[col])
 
-    after_size = data.shape[0]
-    print(f"Original Data Size           : {original_size}")
-    print(f"After Removing Outliers Size : {after_size}")
-    print(f"Data Retained Percentage     : {after_size / original_size:.2%}")
+            elif method == "sqrt":
+                transformed = np.sqrt(data_transformed[col].clip(lower=0))
 
-    return data
+            elif method == "boxcox":
+                transformed, _ = stats.boxcox(data_transformed[col].dropna() + 1)
+                transformed = pd.Series(transformed, index=data_transformed[col].dropna().index)
+
+            elif method == "yeojohnson":
+                transformed, _ = stats.yeojohnson(data_transformed[col].dropna())
+                transformed = pd.Series(transformed, index=data_transformed[col].dropna().index)
+
+            else:
+                raise ValueError("method phải là 'log', 'sqrt', 'boxcox' hoặc 'yeojohnson'")
+
+            if style == "replace":
+                data_transformed.loc[transformed.index, col] = transformed
+
+            elif style == "create_new":
+                new_col = f"{col}_{method}"
+                data_transformed.loc[transformed.index, new_col] = transformed
+
+            else:
+                raise ValueError("style phải là 'replace' hoặc 'create_new'")
+
+        except Exception as e:
+            print(f"⚠️ Lỗi khi xử lý {col}: {e}")
+
+    return data_transformed
 
 # Distribution data
 def frequency_counts(data, data_cols):
