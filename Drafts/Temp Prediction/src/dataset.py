@@ -91,21 +91,26 @@ def fill_time_gaps(data, start_time, end_time, freq="1H"):
     if not isinstance(data.index, pd.DatetimeIndex):
         raise ValueError("Data must have DatetimeIndex")
 
-    if data.index.tz is None and pd.Timestamp(start_time).tz is not None:
-        data.index = data.index.tz_localize(pd.Timestamp(start_time).tz)
-    elif data.index.tz is not None and pd.Timestamp(start_time).tz is None:
-        data.index = data.index.tz_convert(None)
+    tzinfo = data.index.tz
 
-    full_times = pd.date_range(start = start_time, 
-                               end   = end_time, 
-                               freq  = freq)
+    # Tạo time range cần fill
+    expected_times = pd.date_range(start=start_time, end=end_time, freq=freq, tz=tzinfo)
 
-    filled_df = data.reindex(full_times)
+    # Chỉ lấy data trong khoảng start_time và end_time
+    data_in_range = data[(data.index >= start_time) & (data.index <= end_time)]
 
-    # Thêm lại cột time để giữ code cũ chạy được
-    filled_df = filled_df.reset_index().rename(columns={"index": "time"})
+    # Reindex data trong khoảng đó
+    data_filled = data_in_range.reindex(expected_times)
 
-    return filled_df
+    # Gộp lại với dữ liệu ngoài khoảng (giữ nguyên)
+    data_outside_range = data[(data.index < start_time) | (data.index > end_time)]
+
+    final_df = pd.concat([data_outside_range, data_filled]).sort_index()
+
+    # Thêm lại cột time
+    final_df = final_df.reset_index().rename(columns={"index": "time"})
+
+    return final_df
 
 
 # Missing data
@@ -207,14 +212,22 @@ def HandleMissing_fillna(data, method):
     return data
 def HandleMissing_interpolate(data, method):
     import pandas as pd
-    
-    # Nếu index có timezone, remove timezone đi
-    if isinstance(data.index, pd.DatetimeIndex) and data.index.tz is not None:
+
+    # Lưu lại timezone hiện có nếu có
+    tzinfo = data.index.tz if isinstance(data.index, pd.DatetimeIndex) else None
+
+    # Nếu có timezone, tạm bỏ để interpolate
+    if tzinfo is not None:
         data.index = data.index.tz_localize(None)
 
     for col in data.columns:
         if data[col].isnull().any():
             data[col] = data[col].interpolate(method=method)
+
+    # Gán lại timezone cũ cho index
+    if tzinfo is not None:
+        data.index = data.index.tz_localize(tzinfo)
+
     return data
 
 
@@ -571,7 +584,7 @@ def transform_outliers(data, method="log", style="replace"):
     Returns:
         DataFrame: dữ liệu sau khi transform
     """
-    import numpy as np
+    import numpy  as np
     import pandas as pd
     from scipy import stats
 
