@@ -640,3 +640,250 @@ def frequency_distributions(data, data_cols):
            lambda x: f"{(x/len(data))*100:f}%"
         ))
         print()  # cách 1 dòng trống
+
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
+from tensorflow.keras import Model
+class LSTMAutoencoder(Model):    
+    def __init__(self):
+        super(LSTMAutoencoder, self).__init__()
+        self.autoencoder = None
+        self.history = None
+        self.train_mae_loss = None
+        self.test_mae_loss = None
+        self.anomalies = None
+        self.test_score_df = None
+
+    def create_dataset(self, X, y, time_steps):
+        Xs, ys = [], []
+        for i in range(len(X) - time_steps):
+            v = X.iloc[i:(i + time_steps)].values
+            Xs.append(v)        
+            ys.append(y.iloc[i + time_steps])
+        return np.array(Xs), np.array(ys)
+
+    # def _create_sequences(self, data):
+    #     """
+    #     Tạo sequences từ dữ liệu time series
+    #     """
+    #     X, y = [], []
+    #     for i in range(self.time_steps, len(data)):
+    #         X.append(data[i-self.time_steps:i])
+    #         y.append(data[i])
+    #     return np.array(X), np.array(y)
+    
+    def prepare_data(self, train_data, test_data, target_column, time_steps):
+        """
+        Chuẩn bị dữ liệu cho training và testing
+        """        
+        self.target_column = target_column
+        self.train_data = train_data
+        self.test_data = test_data
+        self.time_steps = time_steps
+
+        self.scaler = StandardScaler()
+        self.scaler = self.scaler.fit(train_data[[target_column]])
+
+        # Scale dữ liệu
+        train_data[target_column] = self.scaler.transform(train_data[[target_column]])
+        test_data[target_column] = self.scaler.transform(test_data[[target_column]])
+        
+        self.X_train, self.y_train = self.create_dataset(train_data[[target_column]], train_data[target_column], time_steps)
+        self.X_test, self.y_test = self.create_dataset(test_data[[target_column]], test_data[target_column], time_steps)
+        print(f"Training data shape: {self.X_train.shape}")
+        print(f"Testing data shape: {self.X_test.shape}")
+        
+        return self.X_train, self.y_train, self.X_test, self.y_test
+    
+    def build_autoencoder(self):
+        """
+        Xây dựng autoencoder model
+        """
+        LSTM_units = 64
+        model = tf.keras.Sequential([
+            tf.keras.layers.LSTM(LSTM_units, input_shape=(self.X_train.shape[1], self.X_train.shape[2]), return_sequences=False,name='encoder_lstm'),
+            tf.keras.layers.Dropout(0.2, name='encoder_dropout'),
+            tf.keras.layers.RepeatVector(self.X_train.shape[1], name='decoder_repeater'),
+            tf.keras.layers.LSTM(LSTM_units, return_sequences=True, name='decoder_lstm'),
+            tf.keras.layers.Dropout(0.2, name='decoder_dropout'),
+            tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(self.X_train.shape[2]),name='decoder_dense_output')
+        ])
+
+        model.compile(optimizer='adam', loss='mse')
+        self.autoencoder = model
+        return model
+    
+    def train(self, epochs=5, batch_size=256, validation_split=0.1, patience=5):
+        """
+        Training autoencoder
+        """
+        if self.autoencoder is None:
+            self.build_autoencoder()
+            
+        es = tf.keras.callbacks.EarlyStopping(
+            restore_best_weights=True, 
+            patience=patience
+        )
+        
+        self.history = self.autoencoder.fit(
+            self.X_train, self.y_train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=validation_split,
+            callbacks=[es],
+            shuffle=False
+        )
+
+    def plot_training_history(self):
+        """
+        Vẽ biểu đồ training history
+        """
+        if self.history is None:
+            print("Model chưa được train!")
+            return
+            
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.history.history['loss'], label='Training Loss')
+        plt.plot(self.history.history['val_loss'], label='Validation Loss')
+        plt.legend()
+
+    def evaluate(self):
+        """
+        Đánh giá model
+        """
+        if self.autoencoder is None:
+            print("Model chưa được train!")
+            return
+            
+        test_loss = self.autoencoder.evaluate(self.X_test, self.y_test)
+        print(f"Test Loss: {test_loss}")
+        return test_loss
+    
+    def calculate_anomaly_scores(self):
+        """
+        Tính toán anomaly scores
+        """
+        if self.autoencoder is None:
+            print("Model chưa được train!")
+            return
+            
+        # Training predictions
+        X_train_pred = self.autoencoder.predict(self.X_train)
+        self.train_mae_loss = pd.DataFrame(
+            np.mean(np.abs(X_train_pred - self.X_train), axis=1), 
+            columns=['Error']
+        )
+        
+        # Test predictions
+        X_test_pred = self.autoencoder.predict(self.X_test)
+        self.test_mae_loss = np.mean(np.abs(X_test_pred - self.X_test), axis=1)
+        
+        return self.train_mae_loss, self.test_mae_loss
+
+    def plot_error_distribution(self):
+        """
+        Vẽ phân phối lỗi
+        """
+        if self.train_mae_loss is None or self.test_mae_loss is None:
+            print("Chưa tính toán anomaly scores!")
+            return
+            
+        plt.figure(figsize=(15, 5))
+        
+        plt.subplot(1, 2, 1)
+        sns.histplot(self.train_mae_loss, bins=50, kde=True)
+        plt.title('Training Error Distribution')
+        
+        plt.subplot(1, 2, 2)
+        sns.histplot(self.test_mae_loss, bins=50, kde=True)
+        plt.title('Test Error Distribution')
+        
+        plt.tight_layout()
+        plt.show()
+    
+    def detect_anomalies(self, threshold=None):
+        """
+        Phát hiện anomalies
+        """
+        if threshold is not None:
+            self.threshold = threshold
+            
+        if self.test_mae_loss is None:
+            print("Chưa tính toán anomaly scores!")
+            return
+            
+        # Tạo DataFrame với thông tin chi tiết
+        self.test_score_df = pd.DataFrame(self.test_data[self.time_steps:])
+        self.test_score_df['loss'] = self.test_mae_loss
+        self.test_score_df['threshold'] = self.threshold
+        self.test_score_df['anomaly'] = self.test_score_df.loss > self.test_score_df.threshold
+        self.test_score_df[self.target_column] = self.test_data[self.time_steps:][self.target_column]
+        
+        # Lọc anomalies
+        self.anomalies = self.test_score_df[self.test_score_df.anomaly == True]
+        
+        print(f"Tổng số anomalies phát hiện: {len(self.anomalies)}")
+        print(f"Tỷ lệ anomalies: {len(self.anomalies)/len(self.test_score_df)*100:.2f}%")
+        
+        return self.anomalies
+    
+    def plot_anomaly_scores(self, time_column='time'):
+        """
+        Vẽ biểu đồ anomaly scores
+        """
+        if self.test_score_df is None:
+            print("Chưa phát hiện anomalies!")
+            return
+            
+        plot_df = self.test_score_df.copy()
+        plot_df['time'] = self.test_data[self.time_steps:][time_column].values
+        plt.figure(figsize=(14, 6))
+        sns.lineplot(data=plot_df, x='time', y='loss', label='Test Loss')
+        sns.lineplot(data=plot_df, x='time', y='threshold', label='Threshold')
+        plt.title('Anomaly Scores')
+        plt.xlabel('Time')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.tight_layout()
+
+        plt.show()
+
+    def plot_anomalies_on_data(self, time_column='time'):
+        """
+        Vẽ anomalies trên dữ liệu gốc
+        """
+        if self.anomalies is None:
+            print("Chưa phát hiện anomalies!")
+            return
+        
+        # Dữ liệu gốc
+        original_data = self.scaler.inverse_transform(
+            self.test_data[self.time_steps:][[self.target_column]]
+        ).flatten()
+        plot_df = self.test_data[self.time_steps:].copy()
+        plot_df['original'] = original_data
+        
+        # Anomalies
+        anomaly_y = self.scaler.inverse_transform(
+            self.anomalies[[self.target_column]]
+        ).flatten()
+        anomaly_x = self.anomalies[time_column].values
+
+        plt.figure(figsize=(14, 6))
+        sns.lineplot(data=plot_df, x=time_column, y='original', label=self.target_column, zorder=1)
+        sns.scatterplot(x=anomaly_x, y=anomaly_y, color='red', s=60, label='Anomaly', marker='X', zorder=2)
+
+        
+        plt.title(f'Anomalies Detection on {self.target_column}')
+        plt.xlabel('Time')
+        plt.ylabel('Value')
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
