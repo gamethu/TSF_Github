@@ -14,3 +14,4 @@ torchaudio
 cfgrib
 xarray
 metpy
+plotly

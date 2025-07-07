@@ -641,6 +641,7 @@ def frequency_distributions(data, data_cols):
         ))
         print()  # cách 1 dòng trống
 
+# LSTM autoencoder
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -653,12 +654,12 @@ from tensorflow.keras import Model
 class LSTMAutoencoder(Model):    
     def __init__(self):
         super(LSTMAutoencoder, self).__init__()
-        self.autoencoder = None
-        self.history = None
+        self.autoencoder    = None
+        self.history        = None
         self.train_mae_loss = None
-        self.test_mae_loss = None
-        self.anomalies = None
-        self.test_score_df = None
+        self.test_mae_loss  = None
+        self.anomalies      = None
+        self.test_score_df  = None
 
     def create_dataset(self, X, y, time_steps):
         Xs, ys = [], []
@@ -683,21 +684,21 @@ class LSTMAutoencoder(Model):
         Chuẩn bị dữ liệu cho training và testing
         """        
         self.target_column = target_column
-        self.train_data = train_data
-        self.test_data = test_data
-        self.time_steps = time_steps
+        self.train_data    = train_data
+        self.test_data     = test_data
+        self.time_steps    = time_steps
 
         self.scaler = StandardScaler()
         self.scaler = self.scaler.fit(train_data[[target_column]])
 
         # Scale dữ liệu
         train_data[target_column] = self.scaler.transform(train_data[[target_column]])
-        test_data[target_column] = self.scaler.transform(test_data[[target_column]])
+        test_data[target_column]  = self.scaler.transform(test_data[[target_column]])
         
         self.X_train, self.y_train = self.create_dataset(train_data[[target_column]], train_data[target_column], time_steps)
-        self.X_test, self.y_test = self.create_dataset(test_data[[target_column]], test_data[target_column], time_steps)
-        print(f"Training data shape: {self.X_train.shape}")
-        print(f"Testing data shape: {self.X_test.shape}")
+        self.X_test, self.y_test   = self.create_dataset(test_data[[target_column]], test_data[target_column], time_steps)
+        print(f"Training data shape : {self.X_train.shape}")
+        print(f"Testing data shape  : {self.X_test.shape}")
         
         return self.X_train, self.y_train, self.X_test, self.y_test
     
@@ -707,7 +708,11 @@ class LSTMAutoencoder(Model):
         """
         LSTM_units = 64
         model = tf.keras.Sequential([
-            tf.keras.layers.LSTM(LSTM_units, input_shape=(self.X_train.shape[1], self.X_train.shape[2]), return_sequences=False,name='encoder_lstm'),
+            tf.keras.layers.LSTM(LSTM_units, 
+                                 input_shape      = (self.X_train.shape[1], 
+                                                     self.X_train.shape[2]), 
+                                 return_sequences = False,
+                                 name             = 'encoder_lstm'),
             tf.keras.layers.Dropout(0.2, name='encoder_dropout'),
             tf.keras.layers.RepeatVector(self.X_train.shape[1], name='decoder_repeater'),
             tf.keras.layers.LSTM(LSTM_units, return_sequences=True, name='decoder_lstm'),
@@ -727,17 +732,17 @@ class LSTMAutoencoder(Model):
             self.build_autoencoder()
             
         es = tf.keras.callbacks.EarlyStopping(
-            restore_best_weights=True, 
-            patience=patience
+            restore_best_weights = True, 
+            patience             = patience
         )
         
         self.history = self.autoencoder.fit(
             self.X_train, self.y_train,
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_split=validation_split,
-            callbacks=[es],
-            shuffle=False
+            epochs           = epochs,
+            batch_size       = batch_size,
+            validation_split = validation_split,
+            callbacks        = [es],
+            shuffle          = False
         )
 
     def plot_training_history(self):
@@ -774,14 +779,14 @@ class LSTMAutoencoder(Model):
             return
             
         # Training predictions
-        X_train_pred = self.autoencoder.predict(self.X_train)
+        X_train_pred        = self.autoencoder.predict(self.X_train)
         self.train_mae_loss = pd.DataFrame(
             np.mean(np.abs(X_train_pred - self.X_train), axis=1), 
             columns=['Error']
         )
         
         # Test predictions
-        X_test_pred = self.autoencoder.predict(self.X_test)
+        X_test_pred        = self.autoencoder.predict(self.X_test)
         self.test_mae_loss = np.mean(np.abs(X_test_pred - self.X_test), axis=1)
         
         return self.train_mae_loss, self.test_mae_loss
@@ -819,10 +824,10 @@ class LSTMAutoencoder(Model):
             return
             
         # Tạo DataFrame với thông tin chi tiết
-        self.test_score_df = pd.DataFrame(self.test_data[self.time_steps:])
-        self.test_score_df['loss'] = self.test_mae_loss
-        self.test_score_df['threshold'] = self.threshold
-        self.test_score_df['anomaly'] = self.test_score_df.loss > self.test_score_df.threshold
+        self.test_score_df                     = pd.DataFrame(self.test_data[self.time_steps:])
+        self.test_score_df['loss']             = self.test_mae_loss
+        self.test_score_df['threshold']        = self.threshold
+        self.test_score_df['anomaly']          = self.test_score_df.loss > self.test_score_df.threshold
         self.test_score_df[self.target_column] = self.test_data[self.time_steps:][self.target_column]
         
         # Lọc anomalies
@@ -841,7 +846,7 @@ class LSTMAutoencoder(Model):
             print("Chưa phát hiện anomalies!")
             return
             
-        plot_df = self.test_score_df.copy()
+        plot_df         = self.test_score_df.copy()
         plot_df['time'] = self.test_data[self.time_steps:][time_column].values
         plt.figure(figsize=(14, 6))
         sns.lineplot(data=plot_df, x='time', y='loss', label='Test Loss')
@@ -866,7 +871,7 @@ class LSTMAutoencoder(Model):
         original_data = self.scaler.inverse_transform(
             self.test_data[self.time_steps:][[self.target_column]]
         ).flatten()
-        plot_df = self.test_data[self.time_steps:].copy()
+        plot_df             = self.test_data[self.time_steps:].copy()
         plot_df['original'] = original_data
         
         # Anomalies
