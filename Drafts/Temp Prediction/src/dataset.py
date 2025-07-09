@@ -785,22 +785,21 @@ class LSTMAutoencoder(Model):
         mae_loss = np.mean(np.abs(self.X_pred - X_full), axis=1)
             
         # Tính threshold từ training
-        threshold = np.mean(mae_loss) + 3 * np.std(mae_loss)
         if method == 'std':
             threshold = np.mean(mae_loss) + 3 * np.std(mae_loss)
 
-        elif method == 'quantile':
-            return np.quantile(mae_loss, 95)
+        # elif method == 'quantile':
+        #     threshold = np.quantile(mae_loss, 0.97)
 
-        elif method == 'gmm':
-            from sklearn.mixture import GaussianMixture
-            gmm = GaussianMixture(n_components=2, random_state=0)
-            gmm.fit(mae_loss)
-            # Lấy cluster có mean lớn hơn làm "anomaly"
-            means = gmm.means_.flatten()
-            anomaly_cluster = np.argmax(means)
-            scores = gmm.predict_proba(mae_loss)[:, anomaly_cluster]
-            threshold = np.percentile(mae_loss[scores > 0.5], 5)  # rất nhạy cảm
+        # elif method == 'gmm':
+        #     from sklearn.mixture import GaussianMixture
+        #     gmm = GaussianMixture(n_components=2, random_state=0)
+        #     gmm.fit(mae_loss)
+        #     # Lấy cluster có mean lớn hơn làm "anomaly"
+        #     means = gmm.means_.flatten()
+        #     anomaly_cluster = np.argmax(means)
+        #     scores = gmm.predict_proba(mae_loss)[:, anomaly_cluster]
+        #     threshold = np.percentile(mae_loss[scores > 0.5], 5)  # rất nhạy cảm
         
         # Gắn thông tin anomaly vào dataframe
         self.score_df = full_data[self.time_steps:].copy().reset_index(drop=True)
