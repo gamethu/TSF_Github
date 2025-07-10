@@ -712,7 +712,7 @@ class LSTMAutoencoder(Model):
         self.model = model
         return model
     
-    def train(self, epochs=5, batch_size=512, validation_split=0.1, patience=5, model_path=None):
+    def train(self, epochs=20, batch_size=256, validation_split=0.1, patience=5, model_path=None):
         """
         Training model
         """
