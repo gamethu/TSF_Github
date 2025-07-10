@@ -526,91 +526,111 @@ def remove_outliers(data, method="zscore"):
     print(f"Data Retained Percentage     : {after_size / original_size:.2%}")
 
     return data_cleaned
-def winsorize_outliers(data, method="zscore"):
+def winsorize_outliers(data, 
+                       data_cols  = None, 
+                       method     = "zscore", 
+                       z_thresh   = 3.0, 
+                       iqr_factor = 1.5, 
+                       lower_pct  = 0.01, 
+                       upper_pct  = 0.99, 
+                       verbose    = True):
     """
-    Capping outliers trong numerical columns bằng Z-score, IQR hoặc Percentile.
+    Capping outliers trong numerical columns.
 
     Parameters:
-    data (pd.DataFrame): The input dataframe.
-    method (str): 'zscore', 'iqr' hoặc 'percentile'
+        data (pd.DataFrame): Dữ liệu gốc.
+        method (str): 'zscore', 'iqr', hoặc 'percentile'
+        data_cols (list): Danh sách cột cần xử lý. Mặc định tất cả numeric columns.
+        z_thresh (float): Ngưỡng z-score nếu method='zscore'
+        iqr_factor (float): Hệ số nhân IQR nếu method='iqr'
+        lower_pct (float): Percentile thấp nếu method='percentile'
+        upper_pct (float): Percentile cao nếu method='percentile'
+        verbose (bool): In log xử lý.
 
     Returns:
-    pd.DataFrame: Dataframe sau khi capping outliers.
+        pd.DataFrame: Dữ liệu sau khi capping outlier.
     """
-    import numpy as np
-    import pandas as pd
-
     data_capped = data.copy()
+    if data_cols is None:
+        data_cols = data.select_dtypes(include=["number"]).columns
 
-    # Chỉ lấy các cột numeric
-    numeric_cols = data.select_dtypes(include=["number"]).columns
-
-    for col in numeric_cols:
+    for col in data_cols:
+        outlier_count = 0
         if method == "zscore":
-            mean = data_capped[col].mean()
-            std  = data_capped[col].std()
-            lower_bound = mean - 3 * std
-            upper_bound = mean + 3 * std
+            mean = data[col].mean()
+            std  = data[col].std()
+            lower, upper = mean - z_thresh * std, mean + z_thresh * std
 
         elif method == "iqr":
-            Q1 = data_capped[col].quantile(0.25)
-            Q3 = data_capped[col].quantile(0.75)
+            Q1 = data[col].quantile(0.25)
+            Q3 = data[col].quantile(0.75)
             IQR = Q3 - Q1
-            lower_bound = Q1 - 1.5 * IQR
-            upper_bound = Q3 + 1.5 * IQR
+            lower, upper = Q1 - iqr_factor * IQR, Q3 + iqr_factor * IQR
 
         elif method == "percentile":
-            lower_bound = data_capped[col].quantile(0.01)
-            upper_bound = data_capped[col].quantile(0.99)
+            lower, upper = data[col].quantile(lower_pct), data[col].quantile(upper_pct)
 
         else:
-            raise ValueError("Method phải là 'zscore', 'iqr' hoặc 'percentile'")
+            raise ValueError("Phương pháp phải là 'zscore', 'iqr', hoặc 'percentile'.")
 
-        # Capping outlier về cận
-        data_capped.loc[data_capped[col] < lower_bound, col] = lower_bound
-        data_capped.loc[data_capped[col] > upper_bound, col] = upper_bound
+        mask_lower = data_capped[col] < lower
+        mask_upper = data_capped[col] > upper
+        outlier_count = mask_lower.sum() + mask_upper.sum()
 
-    print(f"✅ Đã capping outliers bằng phương pháp: {method}")
+        data_capped.loc[mask_lower, col] = lower
+        data_capped.loc[mask_upper, col] = upper
+
+        if verbose:
+            print(f"📊 {col}: {outlier_count} outlier(s) capped bằng {method}")
+
+    if verbose:
+        print(f"✅ Đã xử lý outliers bằng phương pháp: {method}\n")
+
     return data_capped
-def transform_outliers(data, method="log", style="replace"):
+def transform_outliers(data,
+                       data_cols = None, 
+                       method    = "log", 
+                       style     = "replace", 
+                       verbose   = True):
+    from scipy import stats
+    
     """
-    Transform tất cả numerical feature để giảm ảnh hưởng outlier.
+    Transform numerical feature để giảm ảnh hưởng outlier.
 
-    Args:
-        data (DataFrame): dữ liệu gốc.
+    Parameters:
+        data (DataFrame): Dữ liệu gốc.
         method (str): 'log', 'sqrt', 'boxcox', 'yeojohnson'
+        data_cols (list): Danh sách cột cần xử lý. Mặc định tất cả numeric columns.
         style (str): 'replace' hoặc 'create_new'
+        verbose (bool): In log xử lý.
 
     Returns:
-        DataFrame: dữ liệu sau khi transform
+        DataFrame: Dữ liệu sau khi transform
     """
-    import numpy  as np
-    import pandas as pd
-    from scipy import stats
-
     data_transformed = data.copy()
+    if data_cols is None:
+        data_cols = data.select_dtypes(include=["number"]).columns
 
-    # Tự động lấy các numeric columns
-    num_cols = data.select_dtypes(include=["number"]).columns
-
-    for col in num_cols:
+    for col in data_cols:
         try:
             if method == "log":
-                transformed = np.log1p(data_transformed[col])
+                if (data[col] < 0).any():
+                    raise ValueError("Log transform yêu cầu giá trị ≥ 0.")
+                transformed = np.log1p(data[col])
 
             elif method == "sqrt":
-                transformed = np.sqrt(data_transformed[col].clip(lower=0))
+                transformed = np.sqrt(data[col].clip(lower=0))
 
             elif method == "boxcox":
-                transformed, _ = stats.boxcox(data_transformed[col].dropna() + 1)
-                transformed = pd.Series(transformed, index=data_transformed[col].dropna().index)
+                transformed, _ = stats.boxcox(data[col].dropna() + 1)
+                transformed = pd.Series(transformed, index=data[col].dropna().index)
 
             elif method == "yeojohnson":
-                transformed, _ = stats.yeojohnson(data_transformed[col].dropna())
-                transformed = pd.Series(transformed, index=data_transformed[col].dropna().index)
+                transformed, _ = stats.yeojohnson(data[col].dropna())
+                transformed = pd.Series(transformed, index=data[col].dropna().index)
 
             else:
-                raise ValueError("method phải là 'log', 'sqrt', 'boxcox' hoặc 'yeojohnson'")
+                raise ValueError("Phương pháp phải là 'log', 'sqrt', 'boxcox' hoặc 'yeojohnson'.")
 
             if style == "replace":
                 data_transformed.loc[transformed.index, col] = transformed
@@ -620,10 +640,14 @@ def transform_outliers(data, method="log", style="replace"):
                 data_transformed.loc[transformed.index, new_col] = transformed
 
             else:
-                raise ValueError("style phải là 'replace' hoặc 'create_new'")
+                raise ValueError("Style phải là 'replace' hoặc 'create_new'.")
+
+            if verbose:
+                print(f"🔄 {col} transform thành công bằng {method}")
 
         except Exception as e:
-            print(f"⚠️ Lỗi khi xử lý {col}: {e}")
+            if verbose:
+                print(f"⚠️ Lỗi xử lý {col}: {e}")
 
     return data_transformed
 
@@ -785,22 +809,21 @@ class LSTMAutoencoder(Model):
         mae_loss = np.mean(np.abs(self.X_pred - X_full), axis=1)
             
         # Tính threshold từ training
-        threshold = np.mean(mae_loss) + 3 * np.std(mae_loss)
         if method == 'std':
             threshold = np.mean(mae_loss) + 3 * np.std(mae_loss)
 
-        elif method == 'quantile':
-            return np.quantile(mae_loss, 95)
+        # elif method == 'quantile':
+        #     threshold = np.quantile(mae_loss, 0.97)
 
-        elif method == 'gmm':
-            from sklearn.mixture import GaussianMixture
-            gmm = GaussianMixture(n_components=2, random_state=0)
-            gmm.fit(mae_loss)
-            # Lấy cluster có mean lớn hơn làm "anomaly"
-            means = gmm.means_.flatten()
-            anomaly_cluster = np.argmax(means)
-            scores = gmm.predict_proba(mae_loss)[:, anomaly_cluster]
-            threshold = np.percentile(mae_loss[scores > 0.5], 5)  # rất nhạy cảm
+        # elif method == 'gmm':
+        #     from sklearn.mixture import GaussianMixture
+        #     gmm = GaussianMixture(n_components=2, random_state=0)
+        #     gmm.fit(mae_loss)
+        #     # Lấy cluster có mean lớn hơn làm "anomaly"
+        #     means = gmm.means_.flatten()
+        #     anomaly_cluster = np.argmax(means)
+        #     scores = gmm.predict_proba(mae_loss)[:, anomaly_cluster]
+        #     threshold = np.percentile(mae_loss[scores > 0.5], 5)  # rất nhạy cảm
         
         # Gắn thông tin anomaly vào dataframe
         self.score_df = full_data[self.time_steps:].copy().reset_index(drop=True)
