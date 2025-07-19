@@ -15,3 +15,5 @@ cfgrib
 xarray
 metpy
 plotly
+scipy
+prophet
