@@ -1,4 +1,7 @@
+from sklearn.neighbors import LocalOutlierFactor
 ## Outlier data
+
+
 def plot_Outlier(data, data_cols, target=None):
     """
     Hiển thị histogram và boxplot cho từng biến số trong data_cols.
@@ -170,20 +173,26 @@ def plot_feature_trends_over_time(data, data_cols,
 def plot_feature_outliers_over_time(data, data_cols,
                                     station_name      = None,
                                     method            = "statistic",
+                                    display           = False,
                                     start_time        = None,
                                     end_time          = None,
                                     freq              = None,
                                     z_thresh          = 3,
                                     modified_z_thresh = 3.5, 
-                                    outliers_fraction = 0.2,
-                                    n_neighbors       = 20,
-                                    factor            = 1.5):
+                                    models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
+                                    factor            = 1.5,
+                                    window_size       = 10,
+                                    dendrogram        = False):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     from scipy.stats import median_abs_deviation
     import numpy as np
+    import sys
+    import os
+    sys.path.append(os.path.abspath("../src"))
+
 
     if isinstance(data, pd.DataFrame):
         name = station_name if station_name else "Unknown"
@@ -211,67 +220,107 @@ def plot_feature_outliers_over_time(data, data_cols,
             if method == "statistic":
                 fig, axes = plt.subplots(2, 2, figsize=(20, 10))
                 
+                from models.anomaly_models import (MyZ_Score,
+                                                   MyZ_Score_modified)
+                
                 for row, sub_method in enumerate(["z_score", "z_score modified"]):
                     if sub_method == "z_score":
-                        mean = df_filtered[feature].mean()
-                        std  = df_filtered[feature].std()
-                        bound = (df_filtered[feature] - mean) / std
-                        outliers = df_filtered[abs(bound) > z_thresh][feature]
-
-                        print(f"🔹 {feature} ({sub_method}, z_thresh={z_thresh}): {len(outliers)} outliers ~ {len(outliers)/len(df_filtered[feature]):.2%}")
+                        Z_outlier = MyZ_Score(data      = df_filtered,
+                                              data_cols = feature,
+                                              display   = display,
+                                              z_thresh  = z_thresh,
+                                              ax        = list([axes[0,0], axes[0,1]]))
+                        print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
 
                     elif sub_method == "z_score modified":
-                        median = df_filtered[feature].median()
-                        MAD    = median_abs_deviation(df_filtered[feature], nan_policy='omit')
-                        if MAD == 0:
-                            bound = pd.Series([0] * len(df_filtered), index=df_filtered.index)
-                        else:
-                            bound = 0.6745 * (df_filtered[feature] - median) / MAD
-                        outliers = df_filtered[abs(bound) > modified_z_thresh][feature]
+                        ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+                                                        data_cols         = feature,
+                                                        display           = display,
+                                                        modified_z_thresh = modified_z_thresh,
+                                                        ax                  = list([axes[1,0], axes[1,1]]))
+                        print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+            elif method == "machine_learning":        
+                fig, axes = plt.subplots(4, 2, figsize=(20, 20))
+                
+                from models.anomaly_models import (MyIsolationForest,
+                                                   MyLocalOutlierFactor,
+                                                   MyProphet,
+                                                   MyAgglomerativeClustering,
+                                                   MyDBSCAN,
+                                                   MyVanillaAutoencoder)
+                # Option 1
+                if models.get("IsolationForest") is not None:
+                    MIF_model   = models.get("IsolationForest")
+                    MIF_outlier = MyIsolationForest(data      = df_filtered,
+                                                    data_cols = feature,
+                                                    model     = MIF_model,
+                                                    display   = display,
+                                                    ax        = axes[0,0])
+                    print(f"🔹 {feature} (IsolationForest, {MIF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
+                
+                # Option 2
+                if models.get("LocalOutlierFactor") is not None:
+                    MLOF_model   = models.get("LocalOutlierFactor")
+                    MLOF_outlier = MyLocalOutlierFactor(data      = df_filtered,
+                                                        data_cols = feature,
+                                                        model     = MLOF_model,
+                                                        display   = display,
+                                                        ax        = axes[0,1])
+                    print(f"🔹 {feature} (LocalOutlierFactor, {MLOF_model}): {len(MLOF_outlier)} outliers ~ {len(MLOF_outlier)/len(df_filtered[feature]):.2%}")
+                
+                # Option 3
+                if models.get("Prophet") is not None:
+                    MP_model   = deepcopy(models.get("Prophet"))
+                    MP_outlier = MyProphet(data      = df_filtered.reset_index(), # Slow!!!
+                                           data_cols = feature,
+                                           model     = MP_model,
+                                           display   = display,
+                                           factor    = factor,
+                                           ax        = list([axes[1,0],axes[1,1]]))
+                    print(f"🔹 {feature} (Prophet, {MP_model}): {len(MP_outlier)} outliers ~ {len(MP_outlier)/len(df_filtered[feature]):.2%}")
+                
+                # Option 4
+                if models.get("AgglomerativeClustering") is not None:
+                    MAC_model   = deepcopy(models.get("AgglomerativeClustering"))
+                    MAC_outlier = MyAgglomerativeClustering(data        = df_filtered.reset_index(), # Slow!!!
+                                                            data_cols   = feature,
+                                                            model       = MAC_model,
+                                                            display     = display,
+                                                            window_size = window_size,
+                                                            dendrogram  = dendrogram,
+                                                            ax          = list([axes[2,0],axes[2,1]]))
+                    print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
+                
+                # Option 5
+                if models.get("DBSCAN") is not None:
+                    M_model   = deepcopy(models.get("DBSCAN"))
+                    M_outlier = MyDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
+                                         data_cols   = feature,
+                                         model       = M_model,
+                                         display     = display,
+                                         window_size = window_size,
+                                         ax          = axes[3,0])
+                    print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
+                
+                # Option 6
+                if models.get("VanillaAutoencoder") is not None:
+                    # MVA_model   = deepcopy(models.get("VanillaAutoencoder"))
+                    MVA_outlier = MyVanillaAutoencoder(data        = df_filtered.reset_index(), # Slow!!!
+                                                       data_cols   = feature,
+                                                       display     = display,
+                                                    #    model       = MVA_model,
+                                                       ax          = axes[3,1])
+                    print(f"🔹 {feature} (VanillaAutoencoder): {len(MVA_outlier)} outliers ~ {len(MVA_outlier)/len(df_filtered[feature]):.2%}")
+                
+            else:
+                raise ValueError(f"Giá trị method không hợp lệ: {method}")
 
-                        print(f"🔹 {feature} ({sub_method}, modified_z_thresh={modified_z_thresh}): {len(outliers)} outliers ~ {len(outliers)/len(df_filtered[feature]):.2%}")
-
-                    # Vẽ lineplot
-                    axes[row, 0].plot(df_filtered.index, df_filtered[feature],
-                                         color     = 'dimgray', 
-                                         linestyle = '-', 
-                                         alpha     = 0.7, 
-                                         label     = f'{feature} (Full Series)')
-                    if not outliers.empty:
-                        axes[row, 0].scatter(outliers.index, outliers,
-                                             color  = 'red', 
-                                             label  = 'Outliers', 
-                                             marker = 'o')
-
-                    axes[row, 0].set_title(f'{feature} - {sub_method} - {name}')
-                    axes[row, 0].set_xlabel('Time')
-                    axes[row, 0].set_ylabel('Value')
-                    axes[row, 0].grid(True)
-                    axes[row, 0].legend()
-
-                    # Barplot số outlier theo năm
-                    if not outliers.empty:
-                        outlier_counts = outliers.resample('Y').count().astype(int)
-                        outlier_counts = outlier_counts.reset_index()
-                        outlier_counts['Year'] = outlier_counts['time'].dt.year
-
-                        colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
-                        axes[row, 1].bar(outlier_counts['Year'], outlier_counts[feature], color=colors)
-                        axes[row, 1].set_xticks(outlier_counts['Year'])
-                        axes[row, 1].set_ylabel('Number of Outliers')
-                        axes[row, 1].set_title(f'Outlier Count per Year - {sub_method}')
-                        axes[row, 1].set_xlabel('Year')
-                        axes[row, 1].grid(True, which='both', linestyle='--', linewidth=0.5)
-                    else:
-                        axes[row, 1].text(0.5, 0.5, 'No outliers found.',
-                                          horizontalalignment = 'center',
-                                          verticalalignment   = 'center',
-                                          transform           = axes[row, 1].transAxes,
-                                          fontsize            = 14)
-                        axes[row, 1].set_title(f'Outlier Count per Year - {sub_method}')
-                        axes[row, 1].set_xticks([]); axes[row, 1].set_yticks([])
-
-                    axes[row, 1].tick_params(axis='x', rotation=45)
+            if display is True:
+                plt.suptitle(f'Outlier Detection for {feature} - {name}', fontsize=18)
+                plt.tight_layout(rect=[0, 0, 1, 0.96])
+                plt.show()
+            else:
+                plt.close(fig)
 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")

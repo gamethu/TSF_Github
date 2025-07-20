@@ -247,7 +247,117 @@ class LSTMAutoencoder(Model):
 
         plt.tight_layout()
         plt.show()
-def MyIsolationForest(data, data_cols, ax, model):
+def MyZ_Score(data, data_cols, ax, z_thresh = 3, display = False):
+    # Scale dữ liệu
+    mean     = data[data_cols].mean()
+    std      = data[data_cols].std()
+    bound    = (data[data_cols] - mean) / std
+    outliers = data[abs(bound) > z_thresh][data_cols]
+
+    if display is True:
+        # Vẽ lineplot
+        ax[0].plot(data.index, data[data_cols],
+                                color     = 'dimgray', 
+                                linestyle = '-', 
+                                alpha     = 0.7, 
+                                label     = f'{data_cols} (Full Series)')
+        if not outliers.empty:
+            ax[0].scatter(outliers.index, outliers,
+                                    color  = 'red', 
+                                    label  = 'Outliers', 
+                                    marker = 'o')
+
+        ax[0].set_title(f'Z_Score_Modified Outlier Detection - {data_cols}')
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel('Value')
+        ax[0].grid(True)
+        ax[0].legend()
+
+        # Barplot số outlier theo năm
+        if not outliers.empty:
+            outlier_counts = outliers.resample('Y').count().astype(int)
+            outlier_counts = outlier_counts.reset_index()
+            outlier_counts['Year'] = outlier_counts['time'].dt.year
+
+            colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
+            ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
+            ax[1].set_xticks(outlier_counts['Year'])
+            ax[1].set_ylabel('Number of Outliers')
+            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+            ax[1].set_xlabel('Year')
+            ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
+        else:
+            ax[1].text(0.5, 0.5, 'No outliers found.',
+                                horizontalalignment = 'center',
+                                verticalalignment   = 'center',
+                                transform           = ax[1].transAxes,
+                                fontsize            = 14)
+            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+            ax[1].set_xticks([]); ax[1].set_yticks([])
+
+        ax[1].tick_params(axis='x', rotation=45)
+
+    return outliers.index
+def MyZ_Score_modified(data, data_cols, ax, modified_z_thresh = 3, display = False):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from scipy.stats import median_abs_deviation
+
+    # Scale dữ liệu
+    median = data[data_cols].median()
+    MAD    = median_abs_deviation(data[data_cols], nan_policy='omit')
+    if MAD == 0:
+        bound = pd.Series([0] * len(data), index=data.index)
+    else:
+        bound = 0.6745 * (data[data_cols] - median) / MAD
+    outliers = data[abs(bound) > modified_z_thresh][data_cols]
+
+    if display is True:
+        # Vẽ lineplot
+        ax[0].plot(data.index, data[data_cols],
+                                color     = 'dimgray', 
+                                linestyle = '-', 
+                                alpha     = 0.7, 
+                                label     = f'{data_cols} (Full Series)')
+        if not outliers.empty:
+            ax[0].scatter(outliers.index, outliers,
+                                    color  = 'red', 
+                                    label  = 'Outliers', 
+                                    marker = 'o')
+    
+        ax[0].set_title(f'Z_Score Outlier Detection - {data_cols}')
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel('Value')
+        ax[0].grid(True)
+        ax[0].legend()
+    
+        # Barplot số outlier theo năm
+        if not outliers.empty:
+            outlier_counts = outliers.resample('Y').count().astype(int)
+            outlier_counts = outlier_counts.reset_index()
+            outlier_counts['Year'] = outlier_counts['time'].dt.year
+    
+            colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
+            ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
+            ax[1].set_xticks(outlier_counts['Year'])
+            ax[1].set_ylabel('Number of Outliers')
+            ax[1].set_title(f'Z_Score Outlier Count per Year')
+            ax[1].set_xlabel('Year')
+            ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
+        else:
+            ax[1].text(0.5, 0.5, 'No outliers found.',
+                                horizontalalignment = 'center',
+                                verticalalignment   = 'center',
+                                transform           = ax[1].transAxes,
+                                fontsize            = 14)
+            ax[1].set_title(f'Z_Score Outlier Count per Year')
+            ax[1].set_xticks([]); ax[1].set_yticks([])
+    
+        ax[1].tick_params(axis='x', rotation=45)
+
+    return outliers.index
+def MyIsolationForest(data, data_cols, ax, model, display = False):
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import IsolationForest
     import matplotlib.pyplot as plt
@@ -267,35 +377,36 @@ def MyIsolationForest(data, data_cols, ax, model):
     data_scaled['anomaly'] = model.predict(data_scaled)
 
     # Lấy index của các outlier
-    outlier_indices = data_scaled.index[data_scaled['anomaly'] == -1]
+    outlier_indices = np.where(data_scaled['anomaly'] == -1)[0]
 
-    # Vẽ plot trên dữ liệu gốc
-    ax.scatter(data.index, data[data_cols],
-               color  = 'dimgray', 
-               label  = 'Normal', 
-               marker = 'o')
-
-    if not outlier_indices.empty:
-        ax.scatter(data.loc[outlier_indices].index, data.loc[outlier_indices, data_cols],
-                   color  = 'red', 
-                   label  = 'Anomaly', 
+    if display is True:
+        # Vẽ plot trên dữ liệu gốc
+        ax.scatter(data.index, data[data_cols],
+                   color  = 'dimgray', 
+                   label  = 'Normal', 
                    marker = 'o')
-    else:
-        print(f"[{data_cols}] No outliers detected.")
 
-    ax.set_title(f'IsolationForest Outlier Detection - {data_cols}')
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Value")
-    ax.grid(True)
-    ax.legend()
+        if not outlier_indices.empty:
+            ax.scatter(data.loc[outlier_indices].index, data.loc[outlier_indices, data_cols],
+                       color  = 'red', 
+                       label  = 'Anomaly', 
+                       marker = 'o')
+        else:
+            print(f"[{data_cols}] No outliers detected.")
 
-    # Trả lại dataframe outliers gốc
-    outliers = data.loc[outlier_indices]
+        ax.set_title(f'IsolationForest Outlier Detection - {data_cols}')
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Value")
+        ax.grid(True)
+        ax.legend()
 
-    return outliers
+    # # Trả lại dataframe outliers gốc
+    # outliers = data.loc[outlier_indices]
+
+    return outlier_indices
 
     # Không cần plt.show() ở đây — để người gọi handle show sau khi plot xong
-def MyLocalOutlierFactor(data, data_cols, ax, model):
+def MyLocalOutlierFactor(data, data_cols, ax, model, display = False):
     from sklearn.neighbors import LocalOutlierFactor
     import numpy as np
     import matplotlib.pyplot as plt
@@ -307,20 +418,21 @@ def MyLocalOutlierFactor(data, data_cols, ax, model):
     outlier_scores = model.negative_outlier_factor_
     is_outlier = y_pred == -1
 
-    # Vẽ plot
-    ax.scatter(data.index, data[data_cols],
-               color  = "dimgray", 
-               marker =  'o', 
-               label  = 'Normal')
-    ax.scatter(data.index[is_outlier], data[data_cols][is_outlier],
-               color  = "red", 
-               marker =  'o', 
-               label  = 'Anomaly')
-    ax.set_title(f"LOF Outliers Detection - {data_cols}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Value")
-    ax.grid(True)
-    ax.legend()
+    if display is True:
+        # Vẽ plot
+        ax.scatter(data.index, data[data_cols],
+                   color  = "dimgray", 
+                   marker =  'o', 
+                   label  = 'Normal')
+        ax.scatter(data.index[is_outlier], data[data_cols][is_outlier],
+                   color  = "red", 
+                   marker =  'o', 
+                   label  = 'Anomaly')
+        ax.set_title(f"LOF Outliers Detection - {data_cols}")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Value")
+        ax.grid(True)
+        ax.legend()
 
     # Trả về dict
     outliers_detected = {
@@ -328,11 +440,14 @@ def MyLocalOutlierFactor(data, data_cols, ax, model):
         "scores": outlier_scores[is_outlier]
     }
 
+    # # Trả lại dataframe outliers gốc
+    # outliers = data.loc[outliers_detected["indices"]]
+
     return outliers_detected["indices"]
 
 
     # Không cần plt.show() ở đây — để người gọi handle show sau khi plot xong
-def MyProphet(data, data_cols, ax, model, factor = 1.5):
+def MyProphet(data, data_cols, ax, model, display = False, factor = 1.5):
     from prophet import Prophet
     import numpy as np
     import pandas as pd
@@ -367,34 +482,35 @@ def MyProphet(data, data_cols, ax, model, factor = 1.5):
                                  how = 'inner', 
                                  on  = 'ds')
 
-    # Vẽ dữ liệu thực lên ax[0]
-    ax[0].scatter(data['time'], data[data_cols],
-               color      = 'dimgray', 
-               linestyle  = '-', 
-               marker     = 'o', 
-               label      = 'Actual Data')
+    if display is True:
+        # Vẽ dữ liệu thực lên ax[0]
+        ax[0].scatter(data['time'], data[data_cols],
+                   color      = 'dimgray', 
+                   linestyle  = '-', 
+                   marker     = 'o', 
+                   label      = 'Actual Data')
 
-    # Vẽ dự báo yhat lên ax[0]
-    ax[0].scatter(forecast_mn['ds'], forecast_mn['yhat'], 
-               color     = 'blue', 
-               linestyle = '--', 
-               linewidth = 1.5, 
-               label     = 'Prophet Forecast')
+        # Vẽ dự báo yhat lên ax[0]
+        ax[0].scatter(forecast_mn['ds'], forecast_mn['yhat'], 
+                   color     = 'blue', 
+                   linestyle = '--', 
+                   linewidth = 1.5, 
+                   label     = 'Prophet Forecast')
 
-    # Vẽ vùng confidence interval
-    ax[0].fill_between(forecast_mn['ds'],
-                       forecast_mn['yhat_lower'],
-                       forecast_mn['yhat_upper'],
-                       color = 'skyblue', 
-                       alpha = 0.3, 
-                       label = 'Confidence Interval')
+        # Vẽ vùng confidence interval
+        ax[0].fill_between(forecast_mn['ds'],
+                           forecast_mn['yhat_lower'],
+                           forecast_mn['yhat_upper'],
+                           color = 'skyblue', 
+                           alpha = 0.3, 
+                           label = 'Confidence Interval')
 
-    # Cài đặt biểu đồ
-    ax[0].set_xlabel('Time')
-    ax[0].set_ylabel(data_cols)
-    ax[0].set_title(f'Prophet Forecast - {data_cols}')
-    ax[0].grid(True)
-    ax[0].legend()
+        # Cài đặt biểu đồ
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel(data_cols)
+        ax[0].set_title(f'Prophet Forecast - {data_cols}')
+        ax[0].grid(True)
+        ax[0].legend()
 
 
     # Tính error & uncertainty
@@ -406,32 +522,36 @@ def MyProphet(data, data_cols, ax, model, factor = 1.5):
         lambda x: 'Anomaly' if (np.abs(x['error']) > factor * x['uncertainty']) else 'Normal', axis=1
     )
 
-    # Tách anomaly và normal
-    colors = {'Anomaly': 'red', 'Normal': 'dimgray'}
-    for anomaly_label in ['Normal', 'Anomaly']:
-        subset = forecasting_final[forecasting_final['anomaly'] == anomaly_label]
-        ax[1].scatter(subset['ds'], subset['y'], 
-                   color = colors[anomaly_label],
-                   label = anomaly_label)
+    if display is True:
+        # Tách anomaly và normal
+        colors = {'Anomaly': 'red', 'Normal': 'dimgray'}
+        for anomaly_label in ['Normal', 'Anomaly']:
+            subset = forecasting_final[forecasting_final['anomaly'] == anomaly_label]
+            ax[1].scatter(subset['ds'], subset['y'], 
+                       color = colors[anomaly_label],
+                       label = anomaly_label)
 
-    # # Optional: plot forecast line và CI
-    # ax[1].plot(forecasting_final['ds'], forecasting_final['yhat'],
-    #         color='black', linestyle='--', linewidth=1, label='Forecast (yhat)')
-    # ax[1].fill_between(forecasting_final['ds'],
-    #                 forecasting_final['yhat_lower'],
-    #                 forecasting_final['yhat_upper'],
-    #                 color='skyblue', alpha=0.3, label='Confidence Interval')
+        # # Optional: plot forecast line và CI
+        # ax[1].plot(forecasting_final['ds'], forecasting_final['yhat'],
+        #         color='black', linestyle='--', linewidth=1, label='Forecast (yhat)')
+        # ax[1].fill_between(forecasting_final['ds'],
+        #                 forecasting_final['yhat_lower'],
+        #                 forecasting_final['yhat_upper'],
+        #                 color='skyblue', alpha=0.3, label='Confidence Interval')
 
-    ax[1].set_title(f'Prophet Outlier Detection - {data_cols}')
-    ax[1].set_xlabel('Time')
-    ax[1].set_ylabel(data_cols)
-    ax[1].grid(True)
-    ax[1].legend()
+        ax[1].set_title(f'Prophet Outlier Detection - {data_cols}')
+        ax[1].set_xlabel('Time')
+        ax[1].set_ylabel(data_cols)
+        ax[1].grid(True)
+        ax[1].legend()
 
     # Trả lại outliers
     outliers = forecasting_final[forecasting_final['anomaly'] == 'Anomaly']
-    return outliers
-def MyAgglomerativeClustering(data, data_cols, ax, model, window_size=10, dendrogram = False):
+    return outliers.index
+def MyAgglomerativeClustering(data, data_cols, ax, model, 
+                              display     = False, 
+                              window_size = 10, 
+                              dendrogram  = False):
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -440,7 +560,8 @@ def MyAgglomerativeClustering(data, data_cols, ax, model, window_size=10, dendro
     from sklearn.preprocessing import StandardScaler
     from sklearn.neighbors import kneighbors_graph
     from copy import deepcopy
-    
+    from collections import Counter
+
     # Tách timezone nếu có
     if pd.api.types.is_datetime64tz_dtype(data['time']):
         tz = data['time'].dt.tz
@@ -453,73 +574,71 @@ def MyAgglomerativeClustering(data, data_cols, ax, model, window_size=10, dendro
     series = data[data_cols].values.flatten()
 
     # Chuyển time-series thành sliding windows
-    X = np.array([series[i:i+window_size] for i in range(len(series) - window_size)])
+    X = np.array([series[i:i + window_size] for i in range(len(series) - window_size)])
+    if X.shape[0] == 0:
+        print("⚠️ Không đủ dữ liệu để tạo sliding windows.")
+        return pd.Series(dtype=int)
 
     # Standard hóa
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    connectivity = kneighbors_graph(X_scaled, n_neighbors=10, include_self=False) # Fix slow
+    connectivity = kneighbors_graph(X_scaled, n_neighbors=10, include_self=False)
 
-    # Tạo dendrogram
-    if dendrogram == True:
+    # Tạo dendrogram nếu bật
+    if dendrogram is True:
         max_dendrogram_samples = 3000
+        ax0 = ax[0]
 
         if X_scaled.shape[0] <= max_dendrogram_samples:
-            # Vẽ full dendrogram
             linked = linkage(X_scaled, method='ward')
-            dendrogram(linked, ax=ax[0])
         else:
-            print(f"Dữ liệu quá lớn ({X_scaled.shape[0]} samples) — chỉ vẽ dendrogram mẫu.")
+            print(f"📉 Dữ liệu quá lớn ({X_scaled.shape[0]} samples), chỉ vẽ dendrogram mẫu.")
             sample_indices = np.random.choice(X_scaled.shape[0], max_dendrogram_samples, replace=False)
-            X_sample       = X_scaled[sample_indices]
-            linked         = linkage(X_sample, method='ward')
-            dendrogram(linked, ax=ax[0])
+            linked = linkage(X_scaled[sample_indices], method='ward')
 
-        ax[0].set_title('Dendrogram (sample)')
-        ax[0].set_xlabel('Time Series Segments')
-        ax[0].set_ylabel('Euclidean Distance')
+        dendrogram(linked, ax=ax0)
+        ax0.set_title('Dendrogram (sample)')
+        ax0.set_xlabel('Time Series Segments')
+        ax0.set_ylabel('Euclidean Distance')
 
-    # Cluster hóa với số cụm
+    # Cluster hóa
     agg_clustering = deepcopy(model)
-    agg_clustering.set_params(connectivity = connectivity)
-    labels_agg     = agg_clustering.fit_predict(X_scaled)
+    agg_clustering.set_params(connectivity=connectivity)
+    labels = agg_clustering.fit_predict(X_scaled)
 
-    # Plot kết quả clustering theo thời gian
-    time_plot = data['time_naive'].values[:len(labels_agg)]
-    colors    = plt.cm.get_cmap('tab10', agg_clustering.n_clusters).colors
+    # Tính time_plot và outlier ngay cả khi không display
+    time_plot = data['time_naive'].values[:len(labels)]
+    series_plot = series[:len(labels)]
 
-    for i in range(agg_clustering.n_clusters):
-        ax[1].scatter(time_plot[labels_agg == i], series[:len(labels_agg)][labels_agg == i],
-                      color = colors[i], 
-                      label = f'Cluster {i}')
-
-    ax[1].set_title(f"Agglomerative Clustering Outlier Detection - {data_cols}")
-    ax[1].set_xlabel("Time")
-    ax[1].set_ylabel(data_cols)
-    ax[1].legend()
-    ax[1].grid(True)
-
-    # Nếu muốn detect outliers: (VD chọn cluster ít điểm nhất làm outlier)
-    from collections import Counter
-    counts          = Counter(labels_agg)
+    # Phát hiện outlier: cụm nhỏ nhất
+    counts          = Counter(labels)
     min_count       = min(counts.values())
     outlier_cluster = [label for label, count in counts.items() if count == min_count][0]
-    outlier_indices = np.where(labels_agg == outlier_cluster)[0]
+    outlier_indices = np.where(labels == outlier_cluster)[0]
     outliers_time   = time_plot[outlier_indices]
-    outliers_value  = series[outlier_indices]
+    outliers_value  = series_plot[outlier_indices]
 
-    ax[1].scatter(outliers_time, outliers_value, 
-                  color     = 'gold', 
-                  edgecolor = 'black',
-                  s         = 100, 
-                  label     = 'Outliers')
-    ax[1].legend()
+    # Vẽ nếu cần
+    if display is True:
+        ax1 = ax[1]
+        colors = plt.cm.get_cmap('tab10', agg_clustering.n_clusters).colors
 
-    # Trả outliers về DataFrame
-    outlier_indices = np.where(labels == -1)[0]
+        for i in range(agg_clustering.n_clusters):
+            ax1.scatter(time_plot[labels == i], series_plot[labels == i],
+                        color=colors[i], label=f'Cluster {i}')
 
+        ax1.scatter(outliers_time, outliers_value,
+                    color='gold', edgecolor='black', s=100, label='Outliers')
+
+        ax1.set_title(f"Agglomerative Clustering Outlier Detection - {data_cols}")
+        ax1.set_xlabel("Time")
+        ax1.set_ylabel(data_cols)
+        ax1.legend()
+        ax1.grid(True)
+
+    # Trả về chỉ số outlier
     return outlier_indices
-def MyDBSCAN(data, data_cols, ax, model, window_size=10):
+def MyDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -551,36 +670,37 @@ def MyDBSCAN(data, data_cols, ax, model, window_size=10):
     # Detect outlier indices
     outlier_indices = np.where(labels == -1)[0]
 
-    # Chuyển outlier indices sang time point
-    time_plot      = data['time_naive'].values[:len(labels)]
-    outliers_time  = time_plot[outlier_indices]
-    outliers_value = series[outlier_indices]
+    if display is True:
+        # Chuyển outlier indices sang time point
+        time_plot      = data['time_naive'].values[:len(labels)]
+        outliers_time  = time_plot[outlier_indices]
+        outliers_value = series[outlier_indices]
 
-    unique_labels = set(labels)
-    for label in unique_labels:
-        if label == -1:
-            # Outliers
-            ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
-                       color     = 'red', 
-                       edgecolor = 'black', 
-                    #    s=100,  
-                       label     = 'Anomaly')
-        else:
-            ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
-                       color = 'dimgray',
-                       label = f'Normal')
+        unique_labels = set(labels)
+        for label in unique_labels:
+            if label == -1:
+                # Outliers
+                ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
+                           color     = 'red', 
+                           edgecolor = 'black', 
+                        #    s=100,  
+                           label     = 'Anomaly')
+            else:
+                ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
+                           color = 'dimgray',
+                           label = f'Normal')
 
-    ax.set_title(f"DBSCAN Outlier Detection - {data_cols}")
-    ax.set_xlabel("Time")
-    ax.set_ylabel(data_cols)
-    ax.legend()
-    ax.grid(True)
+        ax.set_title(f"DBSCAN Outlier Detection - {data_cols}")
+        ax.set_xlabel("Time")
+        ax.set_ylabel(data_cols)
+        ax.legend()
+        ax.grid(True)
 
     # Trả outliers về DataFrame
     outlier_indices = np.where(labels == -1)[0]
 
     return outlier_indices
-def MyVanillaAutoencoder(data, data_cols, ax, window_size=10, epochs=50, batch_size=32):
+def MyVanillaAutoencoder(data, data_cols, ax, display = False, window_size=10, epochs=10, batch_size=32):
     import numpy as np
     import pandas as pd
     import tensorflow as tf
@@ -634,23 +754,24 @@ def MyVanillaAutoencoder(data, data_cols, ax, window_size=10, epochs=50, batch_s
     # Lấy timestamp cho từng sample
     time_plot = data['time_naive'].values[:len(mse)]
 
-    # Vẽ kết quả
-    ax.scatter(time_plot, series[:len(mse)], 
-            color = 'dimgray', 
-            label = 'Normal')
-
-    # Outliers
-    ax.scatter(time_plot[outlier_indices], series[outlier_indices],
-               color     = 'red', 
-               edgecolor = 'black', 
-            #    s=100,  
-               label     = 'Anomaly')
-
-    ax.set_title(f'Vanilla Autoencoder Outlier Detection - {data_cols}')
-    ax.set_xlabel("Time")
-    ax.set_ylabel(data_cols)
-    ax.grid(True)
-    ax.legend()
+    if display is True:
+        # Vẽ kết quả
+        ax.scatter(time_plot, series[:len(mse)], 
+                color = 'dimgray', 
+                label = 'Normal')
+    
+        # Outliers
+        ax.scatter(time_plot[outlier_indices], series[outlier_indices],
+                   color     = 'red', 
+                   edgecolor = 'black', 
+                #    s=100,  
+                   label     = 'Anomaly')
+    
+        ax.set_title(f'Vanilla Autoencoder Outlier Detection - {data_cols}')
+        ax.set_xlabel("Time")
+        ax.set_ylabel(data_cols)
+        ax.grid(True)
+        ax.legend()
 
     # Trả về vị trí outlier
     return outlier_indices

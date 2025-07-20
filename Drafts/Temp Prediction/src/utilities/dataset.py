@@ -1,3 +1,6 @@
+from sklearn.neighbors import LocalOutlierFactor
+
+
 def grib_to_csv(src, des):
     import pandas as pd
     import cfgrib
@@ -650,6 +653,325 @@ def HandleMismatch_aproach3(data, match_type):
 #                 print(f"⚠️ Lỗi xử lý {col}: {e}")
 
 #     return data_transformed
+def handle_feature_outliers_over_time(data, data_cols,
+                                    station_name      = None,
+                                    method            = "statistic",
+                                    display           = False,
+                                    start_time        = None,
+                                    end_time          = None,
+                                    freq              = None,
+                                    z_thresh          = 3,
+                                    modified_z_thresh = 3.5, 
+                                    models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
+                                    factor            = 1.5,
+                                    window_size       = 10,
+                                    dendrogram        = False):
+    import seaborn as sns
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    from scipy.stats import median_abs_deviation
+    import numpy as np
+    import sys
+    import os
+    from copy import deepcopy
+    sys.path.append(os.path.abspath("../src"))
+
+
+    if isinstance(data, pd.DataFrame):
+        name = station_name if station_name else "Unknown"
+        print(f"🔸 Trạm: {name}")
+
+        start_time_         = pd.to_datetime(start_time) if start_time else None
+        end_time_           = pd.to_datetime(end_time)   if end_time else None
+        df_filtered         = data.copy()
+        df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
+        df_filtered         = df_filtered.dropna(subset=['time'])
+
+        if start_time_ is not None:
+            df_filtered = df_filtered[df_filtered['time'] >= start_time_]
+        if end_time_ is not None:
+            df_filtered = df_filtered[df_filtered['time'] <= end_time_]
+
+        if freq:
+            df_filtered  = df_filtered.set_index('time')
+            numeric_cols = df_filtered.select_dtypes(include='number').columns
+            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+
+        df_filtered = df_filtered.set_index('time')
+        outlier_idx = list(df_filtered.index) 
+        
+        df_filtered_temp = deepcopy(df_filtered)
+        
+        for feature in data_cols:
+            if method == "statistic":
+                fig, axes = plt.subplots(2, 2, figsize=(20, 10))
+                
+                from models.anomaly_models import (MyZ_Score,
+                                                   MyZ_Score_modified)
+                outlier_idx = list(df_filtered.index)                
+                for row, sub_method in enumerate(["z_score", "z_score modified"]):
+                    if sub_method == "z_score":
+                        Z_outlier = MyZ_Score(data      = df_filtered,
+                                              data_cols = feature,
+                                              display   = False,
+                                              z_thresh  = z_thresh,
+                                              ax        = list([axes[0,0], axes[0,1]]))
+                        print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
+                        if len(Z_outlier) > 0:
+                            outlier_idx = list(set(outlier_idx).intersection(set(Z_outlier)))
+
+                    elif sub_method == "z_score modified":
+                        ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+                                                        data_cols         = feature,
+                                                        display           = False,
+                                                        modified_z_thresh = modified_z_thresh,
+                                                        ax                = list([axes[1,0], axes[1,1]]))
+                        print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+                        if len(ZM_outlier) > 0:
+                            outlier_idx = list(set(outlier_idx).intersection(set(ZM_outlier)))
+                        
+                print(f"~> Outlier detected: {len(outlier_idx)} outliers ~ {len(outlier_idx)/len(df_filtered[feature]):.2%}")
+                if display is True:
+                    # Vẽ plot trên dữ liệu gốc
+                    axes[0,0].plot(df_filtered.index, df_filtered[feature],
+                                   color     = 'dimgray', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Normal')                    
+                    
+                    axes[0,0].scatter(df_filtered.loc[outlier_idx].index, df_filtered.loc[outlier_idx, feature],
+                                   color     = 'red', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Anomaly')
+                    axes[0,0].set_title(f'Statistic Outlier Handle - Before - {feature}')
+                    axes[0,0].set_xlabel('Time')
+                    axes[0,0].set_ylabel('Value')
+                    axes[0,0].grid(True)
+                    axes[0,0].legend()
+                    
+                    sns.histplot(data = df_filtered, 
+                                 x    = feature, 
+                                #  y    = feature1,
+                                 kde  = True, 
+                                 ax   = axes[1,0])
+                    axes[1,0].set_title(f"Histplot of {feature} Before - {name}")
+                    axes[1,0].set_xlabel(name)
+                    axes[1,0].set_ylabel('Count')
+                    axes[1,0].grid(True)
+                    
+                # Handle
+                if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
+                    df_filtered.loc[outlier_idx, feature] = df_filtered[feature].mean()
+                else:
+                    print("Khong co outlier, skip!!!")
+                    continue
+                
+                if display is True:  
+                    # Vẽ plot trên dữ liệu modify
+                    axes[0,1].plot(df_filtered.index, df_filtered[feature],
+                                   color     = 'dimgray', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Normal')                    
+                    
+                    axes[0,1].scatter(df_filtered.loc[outlier_idx].index, df_filtered.loc[outlier_idx, feature],
+                                   color     = 'red', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Anomaly')
+                    axes[0,1].set_title(f'Statistic Outlier Handle - After - {feature}')
+                    axes[0,1].set_xlabel('Time')
+                    axes[0,1].set_ylabel('Value')
+                    axes[0,1].grid(True)
+                    axes[0,1].legend()
+                    
+                    sns.histplot(data = df_filtered, 
+                                 x    = feature, 
+                                #  y    = feature1,
+                                 kde  = True, 
+                                 ax   = axes[1,1])
+                    axes[1,1].set_title(f"Histplot of {feature} After - {name}")
+                    axes[1,1].set_xlabel(name)
+                    axes[1,1].set_ylabel('Count')
+                    axes[1,1].grid(True)
+            elif method == "machine_learning":        
+                fig, axes = plt.subplots(2, 2, figsize=(20, 10))
+                
+                from models.anomaly_models import (MyIsolationForest,
+                                                   MyLocalOutlierFactor,
+                                                   MyProphet,
+                                                   MyAgglomerativeClustering,
+                                                   MyDBSCAN,
+                                                   MyVanillaAutoencoder)
+                # Option 1
+                if models.get("IsolationForest") is not None:
+                    MIF_model   = models.get("IsolationForest")
+                    MIF_outlier = MyIsolationForest(data      = df_filtered,
+                                                    data_cols = feature,
+                                                    model     = MIF_model,
+                                                    display   = False,
+                                                    ax        = None)
+                    print(f"🔹 {feature} (IsolationForest, {MIF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(MIF_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(MIF_outlier)))
+                
+                # Option 2
+                if models.get("LocalOutlierFactor") is not None:
+                    MLOF_model   = models.get("LocalOutlierFactor")
+                    MLOF_outlier = MyLocalOutlierFactor(data      = df_filtered,
+                                                        data_cols = feature,
+                                                        model     = MLOF_model,
+                                                        display   = False,
+                                                        ax        = None)
+                    print(f"🔹 {feature} (LocalOutlierFactor, {MLOF_model}): {len(MLOF_outlier)} outliers ~ {len(MLOF_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(MLOF_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(MLOF_outlier)))
+                
+                # Option 3
+                if models.get("Prophet") is not None:
+                    MP_model   = deepcopy(models.get("Prophet"))
+                    MP_outlier = MyProphet(data      = df_filtered.reset_index(), # Slow!!!
+                                           data_cols = feature,
+                                           model     = MP_model,
+                                           display   = False,
+                                           factor    = factor,
+                                           ax        = list([None,None]))
+                    print(f"🔹 {feature} (Prophet, {MP_model}): {len(MP_outlier)} outliers ~ {len(MP_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(MP_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(MP_outlier)))
+                
+                # Option 4
+                if models.get("AgglomerativeClustering") is not None:
+                    MAC_model   = deepcopy(models.get("AgglomerativeClustering"))
+                    MAC_outlier = MyAgglomerativeClustering(data        = df_filtered.reset_index(), # Slow!!!
+                                                            data_cols   = feature,
+                                                            model       = MAC_model,
+                                                            display     = False,
+                                                            window_size = window_size,
+                                                            dendrogram  = dendrogram,
+                                                            ax          = list([None,None]))
+                    print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(MAC_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(MAC_outlier)))
+                
+                # Option 5
+                if models.get("DBSCAN") is not None:
+                    M_model   = deepcopy(models.get("DBSCAN"))
+                    M_outlier = MyDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
+                                         data_cols   = feature,
+                                         model       = M_model,
+                                         display     = False,
+                                         window_size = window_size,
+                                         ax          = None)
+                    print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(M_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(M_outlier)))
+                
+                # Option 6
+                if models.get("VanillaAutoencoder") is not None:
+                    # MVA_model   = deepcopy(models.get("VanillaAutoencoder"))
+                    MVA_outlier = MyVanillaAutoencoder(data        = df_filtered.reset_index(), # Slow!!!
+                                                       data_cols   = feature,
+                                                       display     = False,
+                                                    #    model       = MVA_model,
+                                                       ax          = None)
+                    print(f"🔹 {feature} (VanillaAutoencoder): {len(MVA_outlier)} outliers ~ {len(MVA_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(MVA_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(MVA_outlier)))
+                
+                print(f"~> Outlier detected: {len(outlier_idx)} outliers ~ {len(outlier_idx)/len(df_filtered[feature]):.2%}")
+                if display is True:
+                    # Vẽ plot trên dữ liệu gốc
+                    axes[0,0].plot(df_filtered.index, df_filtered[feature],
+                                   color     = 'dimgray', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Normal')                    
+                    
+                    axes[0,0].scatter(df_filtered.loc[outlier_idx].index, df_filtered.loc[outlier_idx, feature],
+                                   color     = 'red', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Anomaly')
+                    axes[0,0].set_title(f'Machine_Learning Outlier Handle - Before - {feature}')
+                    axes[0,0].set_xlabel('Time')
+                    axes[0,0].set_ylabel('Value')
+                    axes[0,0].grid(True)
+                    axes[0,0].legend()
+                    
+                    sns.histplot(data = df_filtered, 
+                                 x    = feature, 
+                                #  y    = feature1,
+                                 kde  = True, 
+                                 ax   = axes[1,0])
+                    axes[1,0].set_title(f"Histplot of {feature} Before - {name}")
+                    axes[1,0].set_xlabel(name)
+                    axes[1,0].set_ylabel('Count')
+                    axes[1,0].grid(True)
+                    
+                # Handle
+                if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
+                    df_filtered.loc[outlier_idx, feature] = df_filtered[feature].mean()
+                else:
+                    print("Khong co outlier, skip!!!")
+                    continue
+                
+                if display is True:  
+                    # Vẽ plot trên dữ liệu modify
+                    axes[0,1].plot(df_filtered.index, df_filtered[feature],
+                                   color     = 'dimgray', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Normal')                    
+                    
+                    axes[0,1].scatter(df_filtered.loc[outlier_idx].index, df_filtered.loc[outlier_idx, feature],
+                                   color     = 'red', 
+                                   linestyle = '-', 
+                                   alpha     = 0.7, 
+                                   label     = 'Anomaly')
+                    axes[0,1].set_title(f'Machine_Learning Outlier Handle - After - {feature}')
+                    axes[0,1].set_xlabel('Time')
+                    axes[0,1].set_ylabel('Value')
+                    axes[0,1].grid(True)
+                    axes[0,1].legend()
+                    
+                    sns.histplot(data = df_filtered, 
+                                 x    = feature, 
+                                #  y    = feature1,
+                                 kde  = True, 
+                                 ax   = axes[1,1])
+                    axes[1,1].set_title(f"Histplot of {feature} After - {name}")
+                    axes[1,1].set_xlabel(name)
+                    axes[1,1].set_ylabel('Count')
+                    axes[1,1].grid(True)
+            else:
+                raise ValueError(f"Giá trị method không hợp lệ: {method}")
+
+            if display is True:
+                plt.suptitle(f'Outlier Handle for {feature} - {name}', fontsize=18)
+                plt.tight_layout(rect=[0, 0, 1, 0.96])
+                plt.show()
+            else:
+                plt.close(fig)
+                
+        data_updated         = data.copy()
+        data_updated['time'] = pd.to_datetime(data_updated['time'], errors='coerce')
+        data_updated         = data_updated.set_index('time')
+
+        # Gán lại các giá trị đã xử lý
+        for feature in data_cols:
+            if feature in df_filtered.columns:
+                data_updated.loc[df_filtered.index, feature] = df_filtered[feature]
+
+
+        # Trả về DataFrame sau khi cập nhật
+        return data_updated.reset_index()
+    else:
+        raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
+
+
 
 # Distribution data
 def frequency_counts(data, data_cols):
