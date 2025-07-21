@@ -700,6 +700,66 @@ def MyDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
     outlier_indices = np.where(labels == -1)[0]
 
     return outlier_indices
+def MyHDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
+    import numpy as np
+    import pandas as pd
+    from sklearn.preprocessing import StandardScaler
+    from hdbscan import HDBSCAN
+
+    # Tách timezone nếu có
+    if pd.api.types.is_datetime64tz_dtype(data['time']):
+        tz                 = data['time'].dt.tz
+        data['time_naive'] = data['time'].dt.tz_convert(None)
+    else:
+        tz                 = None
+        data['time_naive'] = data['time']
+
+    # Chọn cột cần clustering
+    series = data[data_cols].values.flatten()
+
+    # Chuyển time-series thành sliding windows
+    X = np.array([series[i:i+window_size] for i in range(len(series) - window_size)])
+
+    # Standard hóa
+    scaler   = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Fit DBSCAN
+    labels = model.fit_predict(X_scaled)
+
+    # Detect outlier indices
+    outlier_indices = np.where(labels == -1)[0]
+
+    if display is True:
+        # Chuyển outlier indices sang time point
+        time_plot      = data['time_naive'].values[:len(labels)]
+        outliers_time  = time_plot[outlier_indices]
+        outliers_value = series[outlier_indices]
+
+        unique_labels = set(labels)
+        for label in unique_labels:
+            if label == -1:
+                # Outliers
+                ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
+                           color     = 'red', 
+                           edgecolor = 'black', 
+                        #    s=100,  
+                           label     = 'Anomaly')
+            else:
+                ax.scatter(time_plot[labels == label], series[:len(labels)][labels == label],
+                           color = 'dimgray',
+                           label = f'Normal')
+
+        ax.set_title(f"DBSCAN Outlier Detection - {data_cols}")
+        ax.set_xlabel("Time")
+        ax.set_ylabel(data_cols)
+        ax.legend()
+        ax.grid(True)
+
+    # Trả outliers về DataFrame
+    outlier_indices = np.where(labels == -1)[0]
+
+    return outlier_indices
 def MyVanillaAutoencoder(data, data_cols, ax, display = False, window_size=10, epochs=10, batch_size=32):
     import numpy as np
     import pandas as pd

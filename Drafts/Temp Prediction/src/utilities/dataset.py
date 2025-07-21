@@ -701,7 +701,7 @@ def handle_feature_outliers_over_time(data, data_cols,
         df_filtered = df_filtered.set_index('time')
         outlier_idx = list(df_filtered.index) 
         
-        df_filtered_temp = deepcopy(df_filtered)
+        df_filtered_temp = df_filtered.copy()
         
         for feature in data_cols:
             if method == "statistic":
@@ -718,8 +718,8 @@ def handle_feature_outliers_over_time(data, data_cols,
                                               z_thresh  = z_thresh,
                                               ax        = list([axes[0,0], axes[0,1]]))
                         print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
-                        if len(Z_outlier) > 0:
-                            outlier_idx = list(set(outlier_idx).intersection(set(Z_outlier)))
+                        # if len(Z_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(Z_outlier)))
 
                     elif sub_method == "z_score modified":
                         ZM_outlier = MyZ_Score_modified(data              = df_filtered,
@@ -728,8 +728,8 @@ def handle_feature_outliers_over_time(data, data_cols,
                                                         modified_z_thresh = modified_z_thresh,
                                                         ax                = list([axes[1,0], axes[1,1]]))
                         print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
-                        if len(ZM_outlier) > 0:
-                            outlier_idx = list(set(outlier_idx).intersection(set(ZM_outlier)))
+                        # if len(ZM_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(ZM_outlier)))
                         
                 print(f"~> Outlier detected: {len(outlier_idx)} outliers ~ {len(outlier_idx)/len(df_filtered[feature]):.2%}")
                 if display is True:
@@ -763,7 +763,11 @@ def handle_feature_outliers_over_time(data, data_cols,
                     
                 # Handle
                 if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
-                    df_filtered.loc[outlier_idx, feature] = df_filtered[feature].mean()
+                    # Gán NaN vào các outlier
+                    df_filtered.loc[outlier_idx, feature] = np.nan
+                    
+                    # Dùng nội suy tuyến tính (linear) để lấp giá trị NaN
+                    df_filtered[feature] = df_filtered[feature].interpolate(method='linear')
                 else:
                     print("Khong co outlier, skip!!!")
                     continue
@@ -804,6 +808,7 @@ def handle_feature_outliers_over_time(data, data_cols,
                                                    MyProphet,
                                                    MyAgglomerativeClustering,
                                                    MyDBSCAN,
+                                                   MyHDBSCAN,
                                                    MyVanillaAutoencoder)
                 # Option 1
                 if models.get("IsolationForest") is not None:
@@ -844,7 +849,7 @@ def handle_feature_outliers_over_time(data, data_cols,
                 
                 # Option 4
                 if models.get("AgglomerativeClustering") is not None:
-                    MAC_model   = deepcopy(models.get("AgglomerativeClustering"))
+                    MAC_model   = models.get("AgglomerativeClustering")
                     MAC_outlier = MyAgglomerativeClustering(data        = df_filtered.reset_index(), # Slow!!!
                                                             data_cols   = feature,
                                                             model       = MAC_model,
@@ -855,17 +860,17 @@ def handle_feature_outliers_over_time(data, data_cols,
                     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
                     if len(MAC_outlier) > 0:
                         outlier_idx = list(set(outlier_idx).intersection(set(MAC_outlier)))
-                
+
                 # Option 5
-                if models.get("DBSCAN") is not None:
-                    M_model   = deepcopy(models.get("DBSCAN"))
-                    M_outlier = MyDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
-                                         data_cols   = feature,
-                                         model       = M_model,
-                                         display     = False,
-                                         window_size = window_size,
-                                         ax          = None)
-                    print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
+                if models.get("HDBSCAN") is not None:
+                    M_model   = models.get("HDBSCAN")
+                    M_outlier = MyHDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
+                                          data_cols   = feature,
+                                          model       = M_model,
+                                          display     = False,
+                                          window_size = window_size,
+                                          ax          = None)
+                    print(f"🔹 {feature} (HDBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
                     if len(M_outlier) > 0:
                         outlier_idx = list(set(outlier_idx).intersection(set(M_outlier)))
                 
@@ -913,7 +918,11 @@ def handle_feature_outliers_over_time(data, data_cols,
                     
                 # Handle
                 if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
-                    df_filtered.loc[outlier_idx, feature] = df_filtered[feature].mean()
+                    # Gán NaN vào các outlier
+                    df_filtered.loc[outlier_idx, feature] = np.nan
+
+                    # Dùng nội suy tuyến tính (linear) để lấp giá trị NaN
+                    df_filtered[feature] = df_filtered[feature].interpolate(method='linear')
                 else:
                     print("Khong co outlier, skip!!!")
                     continue
