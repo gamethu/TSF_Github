@@ -188,6 +188,7 @@ def plot_feature_outliers_over_time(data, data_cols,
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     from scipy.stats import median_abs_deviation
+    from copy import deepcopy
     import numpy as np
     import sys
     import os

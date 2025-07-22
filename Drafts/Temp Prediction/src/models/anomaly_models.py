@@ -386,8 +386,8 @@ def MyIsolationForest(data, data_cols, ax, model, display = False):
                    label  = 'Normal', 
                    marker = 'o')
 
-        if not outlier_indices.empty:
-            ax.scatter(data.loc[outlier_indices].index, data.loc[outlier_indices, data_cols],
+        if len(outlier_indices) > 0:
+            ax.scatter(data.iloc[outlier_indices].index, data.iloc[outlier_indices][data_cols],
                        color  = 'red', 
                        label  = 'Anomaly', 
                        marker = 'o')
