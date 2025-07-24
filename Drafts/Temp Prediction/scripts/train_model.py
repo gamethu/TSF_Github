@@ -5,92 +5,30 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, learning_curve, validation_curve
 import pandas as pd
 
-def FindBestTuningModel(model, 
-                        method       = "GridSearchCV", 
-                        scoring      = "accuracy", 
-                        random_state = 40020409, 
-                        refit        = "r2",
-                        n_jobs       = 1,
-                        param_grid   = None, 
-                        train_X      = None, 
-                        train_y      = None):
-    """
-    Perform hyperparameter tuning for a given model using GridSearchCV or RandomizedSearchCV.
+def FindBestTuningModel(model, param_grid, train_X, train_y):
+    cv = RepeatedKFold(
+        n_splits  = 10,
+        n_repeats = 10,
+        random_state = 40020409
+    )
+    grid_cv = GridSearchCV(
+        estimator = model,
+        param_grid = param_grid,
+        scoring = "accuracy",
+        n_jobs = 5, # Import, as high as value ~ as much as precessore in order to run
+        cv = cv,
+        refit = True
+    )
+    grid_cv.fit(train_X,train_y)
+    print(f"{type(model).__name__}'s best parameters: {grid_cv.best_params_}")
 
-    This function performs a cross-validated hyperparameter search using either a full grid search
-    (GridSearchCV) or a randomized parameter search (RandomizedSearchCV) with a repeated K-Fold strategy.
-    It prints the best hyperparameters and the associated performance statistics.
+    cv_results   = pd.DataFrame(grid_cv.cv_results_).filter(like = "split")
+    best_results = cv_results.loc[grid_cv.best_index_, :]
 
-    Args:
-        model (estimator): The machine learning model to be tuned (e.g., RandomForestClassifier()).
-        method (str, optional): The search method to use. Must be either "GridSearchCV" (default)
-                                or "RandomizedSearchCV".
-        scoring (str, optional): Scoring metric to evaluate the models. Default is "accuracy".
-        random_state (int, optional): Random seed for reproducibility. Used only in RandomizedSearchCV.
-        param_grid (dict): Dictionary of parameter grid (for GridSearchCV) or parameter distributions
-                           (for RandomizedSearchCV).
-        train_X (array-like): Feature matrix for training.
-        train_y (array-like): Target vector corresponding to `train_X`.
-
-    Returns:
-        estimator: The best estimator fitted with the best found hyperparameters.
-
-    Raises:
-        ValueError: If `method` is neither "GridSearchCV" nor "RandomizedSearchCV".
-
-    Prints:
-        - Best hyperparameters found.
-        - Mean and standard deviation of cross-validated accuracy for the best model.
-    """
-    
-    from sklearn.model_selection import (GridSearchCV, 
-                                         RandomizedSearchCV, 
-                                         RepeatedKFold)
-    import pandas as pd
-    import numpy  as np
-
-    cv = RepeatedKFold(n_splits     = 10, 
-                       n_repeats    = 10, 
-                       random_state = 40020409)
-
-    grid_cv = None
-    if method == "GridSearchCV":
-        grid_cv = GridSearchCV(estimator  = model,
-                               param_grid = param_grid,
-                               scoring    = scoring,
-                               cv         = cv,
-                               n_jobs     = n_jobs,
-                               verbose    = 3,
-                               refit      = refit)
-    elif method == "RandomizedSearchCV":
-        grid_cv = RandomizedSearchCV(estimator           = model,
-                                     param_distributions = param_grid,
-                                     scoring             = scoring,
-                                     cv                  = cv,
-                                     n_iter              = 50,              # Số lượng mẫu thử nghiệm từ không gian tham số
-                                     n_jobs              = n_jobs,
-                                     verbose             = 3,
-                                     refit               = refit,
-                                     random_state        = random_state)
-    else:
-        raise ValueError(f"Unsupported search method: {method}")
-
-    grid_cv.fit(train_X, train_y)
-
-    print(f"\n{type(model).__name__}'s best parameters using {method}: {grid_cv.best_params_}")
-
-    # Extract all test scores of best index
-    cv_results = pd.DataFrame(grid_cv.cv_results_)
-    split_cols = cv_results.filter(like="split").loc[grid_cv.best_index_]
-
-    mean_acc = split_cols.mean()
-    std_acc  = split_cols.std()
-
-    print(f"Mean accuracy          : {mean_acc:.4f}")
-    print(f"Accuracy std deviation : {std_acc:.4f}")
+    print(f"Mean accuracy          : {best_results.mean()}")
+    print(f"Accuracy std deviation : {best_results.std()}")
 
     return grid_cv.best_estimator_
-
 
 # Model tuning
 def plot_VC(X_data, Y_data, model, param_grid, n_jobs, ylim=None, log=True):
