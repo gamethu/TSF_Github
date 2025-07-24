@@ -573,52 +573,121 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
         ax[1].grid(True, axis="y")        
 
 # Custom evaluation function to replace plots.evaluate_model
-def evaluate_model(models, X_train, X_test, y_train, y_test, features, target, model_names, station_name, method=None):
-    from sklearn.preprocessing import OneHotEncoder
+def evaluate_model(models, X_train, X_test, y_train, y_test, features, target, param_grid, station_name, method="Validation_Curve"):
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
     import seaborn as sns
-    from sklearn.metrics import confusion_matrix, classification_report
-    from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
-    import importlib
+    from sklearn.metrics import PredictionErrorDisplay, r2_score, mean_absolute_error, mean_squared_error, mean_squared_log_error, mean_absolute_percentage_error
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import cross_val_predict, cross_validate
+    from sklearn.model_selection import ValidationCurveDisplay, validation_curve, GridSearchCV, cross_val_predict, cross_validate
+    from sklearn.model_selection import LearningCurveDisplay, learning_curve
+
+    X = X_train[features.columns.tolist()][:600]  # or X = features
+    y = y_train[:600]
+    for model_name, model in models.items():
+        # --- Plot: Validation Curve ---    
+        fig, axs = plt.subplots(2, 4, figsize=(24, 10), sharey=False)
+        axs = np.ravel(axs)
+        if method == "GridSearchCV":
+            # --- GridSearchCV for hyperparameter tuning ---
+            param_grid_dict = {item["param_name"]: item["param_range"] for item in param_grid}
+            grid_search = GridSearchCV(
+                estimator=model,
+                param_grid=param_grid_dict,
+                scoring="r2",
+                n_jobs=-1,
+                cv=5,
+                verbose=1
+            )
+            grid_search.fit(X, y)
+            print(f"Best score: {grid_search.best_score_:.3f}")
+            print(f"Best parameters: {grid_search.best_params_}")        
+            best_model = grid_search.best_estimator_       
+            
+        elif method == "Validation_Curve":
+            best_params = {}
+            for i, config in enumerate(param_grid):
+                param_name = config["param_name"]
+                param_range = config["param_range"]
+                # Validation curve for n_estimators
+                train_scores, test_scores = validation_curve(
+                    model,
+                    X,
+                    y,
+                    param_name=param_name,
+                    param_range=param_range,
+                    scoring="r2",
+                    n_jobs=-1,
+                    cv=5
+                )
+                best_idx = np.argmax(test_scores.mean(axis=1))
+                best_params[param_name] = param_range[best_idx]
+                axs[i].plot(param_range, train_scores.mean(axis=1), label="Train", color="blue")
+                axs[i].plot(param_range, test_scores.mean(axis=1), label="Test", color="orange")
+                axs[i].set_title(f"Validation Curve ({param_name})")
+                axs[i].set_xlabel(param_name)
+                axs[i].set_ylabel("R2 Score")
+                axs[i].legend()
+                print(f"Best parameters {param_name}: {best_params[param_name]}")
+                
+            model.set_params(**best_params)
+            model.fit(X,y)
+            best_model = model
+            
+        train_sizes, train_scores, test_scores  = learning_curve(
+            best_model,
+            X,
+            y,
+            cv=5,
+            n_jobs=-1,
+            train_sizes=np.linspace(0.1, 1.0, 10),
+            scoring="r2",
+            shuffle=False,
+            random_state=0
+        )
+        display = LearningCurveDisplay(train_sizes=train_sizes,
+            train_scores=train_scores, test_scores=test_scores, score_name="R2")
+        display.plot(ax=axs[4])
     
-    n_models = len(models)
-    for idx, (model, model_name) in enumerate(zip(models, model_names)):
-        y_pred = pd.DataFrame(data    = model.predict(X_test[features.columns]), 
-                      index   = y_test.index, 
-                      columns = ['wind_direction_deg'])
+        y_pred = best_model.predict(X_test[features.columns.tolist()][:600])
+        test_r2 = best_model.score(X_test[features.columns.tolist()][:600], y_test[:600])
+        test_mae = mean_absolute_error(y_test[:600], y_pred)
+        test_mse = mean_squared_error(y_test[:600], y_pred)
+        test_msle = mean_squared_log_error(y_test[:600], y_pred)
+        test_mape = mean_absolute_percentage_error(y_test[:600], y_pred)
+        print(f"R2 score on test set: {test_r2:.2f}")
+        print(f"MAE on test set: {test_mae:.2f}")
+        print(f"MSE on test set: {test_mse:.2f}")
+        print(f"MSLE on test set: {test_msle:.2f}")
+        print(f"MAPE on test set: {test_mape:.2f}%")
+    
+        PredictionErrorDisplay.from_predictions(
+            y_true=y_test[:600],
+            y_pred=y_pred,
+            kind="actual_vs_predicted",
+            subsample=100,
+            ax=axs[5],
+            random_state=0,
+        )
+        axs[5].set_title("Actual vs. Predicted Values")
+    
+        PredictionErrorDisplay.from_predictions(
+            y_true=y_test[:600],
+            y_pred=y_pred,
+            kind="residual_vs_predicted",
+            subsample=100,
+            ax=axs[6],
+            random_state=0,
+        )
+        axs[6].set_title("Residuals vs. Predicted Values")
+        plt.suptitle("Plotting cross-validated predictions")
         
-        # Calculate metrics
-        r2 = r2_score(y_test, y_pred)
-        mae = mean_absolute_error(y_test, y_pred)
-        mse = mean_squared_error(y_test, y_pred)
-        mape = mean_absolute_percentage_error(y_test, y_pred)
-        print(f"R²: {r2:.4f}, MAE: {mae:.4f}, MSE: {mse:.4f}, MAPE: {mape:.4f}")
-
-        # 1. Predicted vs. Actual Scatter Plot
-        plt.figure(figsize=(8, 6))
-        plt.scatter(y_test, y_pred, alpha=0.5, color='blue', label='Predicted vs. Actual')
-        plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label='Perfect Prediction')
-        plt.title(f'{model_name} - Predicted vs. Actual({station_name})')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-        y_pred = y_pred.squeeze()
-        residuals = y_test - y_pred
-        plt.figure(figsize=(8, 6))
-        plt.scatter(y_pred, residuals, alpha=0.3, color="purple")
-        plt.axhline(0, color='red', linestyle='--')
-        plt.title(f"{model_name} - Residuals Plot ({station_name})")
-        plt.grid(True)
-        plt.show()
-
-        # Distribution of residuals
-        plt.figure(figsize=(8, 6))
-        sns.histplot(residuals, bins=30, kde=True, color="green")
-        plt.title(f"{model_name} - Residual Distribution ({station_name})")
-        plt.grid(True)
+        # Adjust layout and add super title
+        plt.suptitle(f"{model_name} Evaluation - {station_name}", fontsize=16)
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.85)
         plt.show()
 
 
