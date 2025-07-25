@@ -599,8 +599,8 @@ def plot_evaluate_model_over_time(data, data_cols,
     import numpy as np
     import sys
     import os
-    sys.path.append(os.path.abspath("/src"))
-
+    sys.path.append(os.path.abspath("../../src"))
+    
     if isinstance(data, pd.DataFrame):
         name = station_name if station_name else "Unknown"
         print(f"🔸 Trạm: {name}")
@@ -662,14 +662,14 @@ def plot_evaluate_model_over_time(data, data_cols,
                                                         model     = MRF_model,
                                                         display   = display,
                                                         ax        = evaluation(data_cols, 
-                                                                            list([axes[0,0],axes[0,1],axes[1,0]]), 
+                                                                            list([axes[0,0],axes[0,1],axes[1,0],axes[1,1],axes[2,0]]), 
                                                                             MRF_model, 
                                                                             X_train, 
                                                                             y_train, 
                                                                             X_test, 
                                                                             y_test, 
                                                                             display,
-                                                                            n_sample=600)
+                                                                            n_sample=100)
                                                         )
                 # print(f"🔹(IsolationForest, {MRF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
             
@@ -802,15 +802,21 @@ def evaluation(data_cols, ax, model, X_train, y_train, X_test, y_test, display =
     ax[0].set_xlabel("Time")
     ax[0].set_ylabel("Value")
     ax[0].legend()
+    ax[0].grid(True)
 
     if n_sample is None:
-        n_sample=y_test.shape[0] 
+        indices = np.arange(len(y_test))
+    else:
+        step = max(1, len(y_test) // n_sample)  # Tính bước nhảy
+        indices = np.arange(0, len(y_test), step, dtype=int)  # Lấy mẫu đều
 
-    ax[1].plot(y_test[:n_sample].index, y_test[:n_sample].values, label="Observed", color="red")
-    ax[1].plot(y_pred[:n_sample].index, y_pred[:n_sample].values, label="Forecasting", color="green", alpha=0.7)
-    ax[1].set_title(f"Forecasting Results with {n_sample}")
+    ax[1].plot(y_test.index[indices], y_test.values[indices], label="Observed", color="red")
+    ax[1].plot(y_pred.index[indices], y_pred.values[indices], label="Forecasting", color="green", alpha=0.7)
+    ax[1].set_title(f"Forecasting Results with {n_sample} sample")
     ax[1].set_xlabel("Time")
     ax[1].set_ylabel("Value")
+    ax[1].legend()
+    ax[1].grid(True)
 
     train_sizes, train_scores, test_scores  = learning_curve(
             model,
@@ -825,7 +831,38 @@ def evaluation(data_cols, ax, model, X_train, y_train, X_test, y_test, display =
     display = LearningCurveDisplay(train_sizes=train_sizes,
         train_scores=train_scores, test_scores=test_scores, score_name="Score")
     display.plot(ax=ax[2])
-    ax[0].set_title("Learning Curve")
+    ax[2].set_title("Learning Curve")
+    ax[2].grid(True)
+
+    # Forecast Error
+    forecast_error = y_test - y_pred
+
+    # Tracking Signals
+    mad = np.mean(np.abs(forecast_error))
+    tracking_signals = np.cumsum(forecast_error) / mad
+    upper_limit = 6 * mad
+    lower_limit = -6 * mad
+    print("MAD:", mad)
+    print("Upper Limit:", upper_limit)
+    print("Lower Limit:", lower_limit)
+
+    # 2. Forecast Error (stem plot with sampling)
+    ax[3].stem(np.arange(len(forecast_error))[indices],
+          forecast_error.values[indices],
+          basefmt=" ")
+    ax[3].set_title(f"Forecast Error with {n_sample} sample")
+    ax[3].set_ylabel("Error")
+    ax[3].grid(True)
+
+    # 3. Tracking Signals (stem plot with sampling)
+    ax[4].stem(np.arange(len(forecast_error))[indices],
+                 tracking_signals.values[indices],
+                 basefmt=" ")
+    ax[4].axhline(upper_limit, color='orange')
+    ax[4].axhline(lower_limit, color='yellow')
+    ax[4].set_title(f"Tracking Signals with {n_sample} sample")
+    ax[4].set_ylabel("Signal")
+    ax[4].grid(True)
 
     return ax
     
