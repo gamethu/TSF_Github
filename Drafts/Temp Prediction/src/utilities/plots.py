@@ -573,123 +573,262 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
         ax[1].grid(True, axis="y")        
 
 # Custom evaluation function to replace plots.evaluate_model
-def evaluate_model(models, X_train, X_test, y_train, y_test, features, target, param_grid, station_name, method="Validation_Curve"):
-    import numpy as np
+def plot_evaluate_model_over_time(data, data_cols,
+                                    station_name      = None,
+                                    method            = "statistic",
+                                    display           = False,
+                                    start_time        = None,
+                                    end_time          = None,
+                                    freq              = None,
+                                    z_thresh          = 3,
+                                    modified_z_thresh = 3.5, 
+                                    models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
+                                    factor            = 1.5,
+                                    window_size       = 10,
+                                    dendrogram        = False,
+                                    X_train= None,
+                                    y_train= None,
+                                    X_test= None,                                    
+                                    y_test= None):
+    import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
-    import seaborn as sns
-    from sklearn.metrics import PredictionErrorDisplay, r2_score, mean_absolute_error, mean_squared_error, mean_squared_log_error, mean_absolute_percentage_error
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import cross_val_predict, cross_validate
-    from sklearn.model_selection import ValidationCurveDisplay, validation_curve, GridSearchCV, cross_val_predict, cross_validate
-    from sklearn.model_selection import LearningCurveDisplay, learning_curve
+    import matplotlib.dates as mdates
+    from scipy.stats import median_abs_deviation
+    from copy import deepcopy
+    import numpy as np
+    import sys
+    import os
+    sys.path.append(os.path.abspath("/src"))
 
-    X = X_train[features.columns.tolist()][:600]  # or X = features
-    y = y_train[:600]
-    for model_name, model in models.items():
-        # --- Plot: Validation Curve ---    
-        fig, axs = plt.subplots(2, 4, figsize=(24, 10), sharey=False)
-        axs = np.ravel(axs)
-        if method == "GridSearchCV":
-            # --- GridSearchCV for hyperparameter tuning ---
-            param_grid_dict = {item["param_name"]: item["param_range"] for item in param_grid}
-            grid_search = GridSearchCV(
-                estimator=model,
-                param_grid=param_grid_dict,
-                scoring="r2",
-                n_jobs=-1,
-                cv=5,
-                verbose=1
-            )
-            grid_search.fit(X, y)
-            print(f"Best score: {grid_search.best_score_:.3f}")
-            print(f"Best parameters: {grid_search.best_params_}")        
-            best_model = grid_search.best_estimator_       
+    if isinstance(data, pd.DataFrame):
+        name = station_name if station_name else "Unknown"
+        print(f"🔸 Trạm: {name}")
+
+        start_time_ = pd.to_datetime(start_time) if start_time else None
+        end_time_   = pd.to_datetime(end_time)   if end_time else None
+        df_filtered = data.copy()
+        df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
+        df_filtered = df_filtered.dropna(subset=['time'])
+
+        if start_time_ is not None:
+            df_filtered = df_filtered[df_filtered['time'] >= start_time_]
+        if end_time_ is not None:
+            df_filtered = df_filtered[df_filtered['time'] <= end_time_]
+
+        if freq:
+            df_filtered = df_filtered.set_index('time')
+            numeric_cols = df_filtered.select_dtypes(include='number').columns
+            df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+
+        df_filtered = df_filtered.set_index('time')
+
+        if method == "statistic":
+            fig, axes = plt.subplots(2, 2, figsize=(20, 10))
             
-        elif method == "Validation_Curve":
-            best_params = {}
-            for i, config in enumerate(param_grid):
-                param_name = config["param_name"]
-                param_range = config["param_range"]
-                # Validation curve for n_estimators
-                train_scores, test_scores = validation_curve(
-                    model,
-                    X,
-                    y,
-                    param_name=param_name,
-                    param_range=param_range,
-                    scoring="r2",
-                    n_jobs=-1,
-                    cv=5
-                )
-                best_idx = np.argmax(test_scores.mean(axis=1))
-                best_params[param_name] = param_range[best_idx]
-                axs[i].plot(param_range, train_scores.mean(axis=1), label="Train", color="blue")
-                axs[i].plot(param_range, test_scores.mean(axis=1), label="Test", color="orange")
-                axs[i].set_title(f"Validation Curve ({param_name})")
-                axs[i].set_xlabel(param_name)
-                axs[i].set_ylabel("R2 Score")
-                axs[i].legend()
-                print(f"Best parameters {param_name}: {best_params[param_name]}")
-                
-            model.set_params(**best_params)
-            model.fit(X,y)
-            best_model = model
+            from models.anomaly_models import (MyZ_Score,
+                                                MyZ_Score_modified)
             
-        train_sizes, train_scores, test_scores  = learning_curve(
-            best_model,
+            for row, sub_method in enumerate(["z_score", "z_score modified"]):
+                if sub_method == "z_score":
+                    Z_outlier = MyZ_Score(data      = df_filtered,
+                                            data_cols = feature,
+                                            display   = display,
+                                            z_thresh  = z_thresh,
+                                            ax        = list([axes[0,0], axes[0,1]]))
+                    print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
+
+                elif sub_method == "z_score modified":
+                    ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+                                                    data_cols         = feature,
+                                                    display           = display,
+                                                    modified_z_thresh = modified_z_thresh,
+                                                    ax                  = list([axes[1,0], axes[1,1]]))
+                    print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+        elif method == "machine_learning":        
+            fig, axes = plt.subplots(4, 2, figsize=(20, 20))
+            
+            from models.anomaly_models import (MyIsolationForest,
+                                               MyLocalOutlierFactor,
+                                               MyProphet,
+                                               MyAgglomerativeClustering,
+                                               MyDBSCAN,
+                                               MyVanillaAutoencoder)
+            
+            if models.get("RandomForestRegressor") is not None:
+                MRF_model   = models.get("RandomForestRegressor")
+                MRF_outlier = MyRandomForestRegressor(data      = df_filtered,
+                                                        data_cols = data_cols,
+                                                        model     = MRF_model,
+                                                        display   = display,
+                                                        ax        = evaluation(data_cols, 
+                                                                            list([axes[0,0],axes[0,1],axes[1,0]]), 
+                                                                            MRF_model, 
+                                                                            X_train, 
+                                                                            y_train, 
+                                                                            X_test, 
+                                                                            y_test, 
+                                                                            display,
+                                                                            n_sample=600)
+                                                        )
+                # print(f"🔹(IsolationForest, {MRF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 1
+            # if models.get("IsolationForest") is not None:
+            #     MIF_model   = models.get("IsolationForest")
+            #     MIF_outlier = MyIsolationForest(data      = df_filtered,
+            #                                     data_cols = feature,
+            #                                     model     = MIF_model,
+            #                                     display   = display,
+            #                                     ax        = axes[0,0])
+            #     print(f"🔹 {feature} (IsolationForest, {MIF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 2
+            # if models.get("LocalOutlierFactor") is not None:
+            #     MLOF_model   = models.get("LocalOutlierFactor")
+            #     MLOF_outlier = MyLocalOutlierFactor(data      = df_filtered,
+            #                                         data_cols = feature,
+            #                                         model     = MLOF_model,
+            #                                         display   = display,
+            #                                         ax        = axes[0,1])
+            #     print(f"🔹 {feature} (LocalOutlierFactor, {MLOF_model}): {len(MLOF_outlier)} outliers ~ {len(MLOF_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 3
+            # if models.get("Prophet") is not None:
+            #     MP_model   = deepcopy(models.get("Prophet"))
+            #     MP_outlier = MyProphet(data      = df_filtered.reset_index(), # Slow!!!
+            #                             data_cols = feature,
+            #                             model     = MP_model,
+            #                             display   = display,
+            #                             factor    = factor,
+            #                             ax        = list([axes[1,0],axes[1,1]]))
+            #     print(f"🔹 {feature} (Prophet, {MP_model}): {len(MP_outlier)} outliers ~ {len(MP_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 4
+            # if models.get("AgglomerativeClustering") is not None:
+            #     MAC_model   = deepcopy(models.get("AgglomerativeClustering"))
+            #     MAC_outlier = MyAgglomerativeClustering(data        = df_filtered.reset_index(), # Slow!!!
+            #                                             data_cols   = feature,
+            #                                             model       = MAC_model,
+            #                                             display     = display,
+            #                                             window_size = window_size,
+            #                                             dendrogram  = dendrogram,
+            #                                             ax          = list([axes[2,0],axes[2,1]]))
+            #     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 5
+            # if models.get("DBSCAN") is not None:
+            #     M_model   = deepcopy(models.get("DBSCAN"))
+            #     M_outlier = MyDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
+            #                             data_cols   = feature,
+            #                             model       = M_model,
+            #                             display     = display,
+            #                             window_size = window_size,
+            #                             ax          = axes[3,0])
+            #     print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
+            
+            # # Option 6
+            # if models.get("VanillaAutoencoder") is not None:
+            #     # MVA_model   = deepcopy(models.get("VanillaAutoencoder"))
+            #     MVA_outlier = MyVanillaAutoencoder(data        = df_filtered.reset_index(), # Slow!!!
+            #                                         data_cols   = feature,
+            #                                         display     = display,
+            #                                     #    model       = MVA_model,
+            #                                         ax          = axes[3,1])
+            #     print(f"🔹 {feature} (VanillaAutoencoder): {len(MVA_outlier)} outliers ~ {len(MVA_outlier)/len(df_filtered[feature]):.2%}")
+            
+        else:
+            raise ValueError(f"Giá trị method không hợp lệ: {method}")
+
+        if display is True:
+            plt.suptitle(f'Evaluation Model - {name}', fontsize=18)
+            plt.tight_layout(rect=[0, 0, 1, 0.96])
+            plt.show()
+        else:
+            plt.close(fig)
+
+    else:
+        raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
+    
+def MyRandomForestRegressor(data, data_cols, ax, model, display = False): 
+    return
+
+def evaluation(data_cols, ax, model, X_train, y_train, X_test, y_test, display = False, n_sample=None):
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.ensemble import IsolationForest    
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    from sklearn.model_selection import LearningCurveDisplay, learning_curve, TimeSeriesSplit, cross_val_score
+    from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_squared_log_error, mean_absolute_percentage_error
+
+    X = X_train[data_cols] # or X = features
+    y = y_train
+
+    model = model
+    model.fit(X, y)
+
+    # Sử dụng TimeSeriesSplit cho cross-validation
+    tscv = TimeSeriesSplit(n_splits=5)
+    # Predict anomaly
+    y_pred = model.predict(X_test[data_cols])
+    y_pred=pd.Series(y_pred, index=y_test.index)
+
+    metrics = {}
+    mae = mean_absolute_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    msle = mean_squared_log_error(y_test, y_pred)
+    mape = mean_absolute_percentage_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    cv_scores = cross_val_score(model, X, y, cv=tscv, scoring='r2')
+    metrics = {
+        'R²': r2,
+        'MAE': mae,
+        'MSE': mse,
+        'MSLE': msle,
+        'MAPE': mape,
+        'CV R²': cv_scores.mean(),
+        'CV R² Std': cv_scores.std()
+    }
+
+    metrics_df = pd.DataFrame([metrics])
+    print(metrics_df)
+
+
+    ax[0].plot(y_train.index, y_train.values, label='Before', color='blue')
+    ax[0].plot(y_test.index, y_test.values, label='Observed', color='red')
+    ax[0].plot(y_pred.index, y_pred.values, label='Forecasting', color='green')
+    ax[0].set_title("Forecasting Results")
+    ax[0].set_xlabel("Time")
+    ax[0].set_ylabel("Value")
+    ax[0].legend()
+
+    if n_sample is None:
+        n_sample=y_test.shape[0] 
+
+    ax[1].plot(y_test[:n_sample].index, y_test[:n_sample].values, label="Observed", color="red")
+    ax[1].plot(y_pred[:n_sample].index, y_pred[:n_sample].values, label="Forecasting", color="green", alpha=0.7)
+    ax[1].set_title(f"Forecasting Results with {n_sample}")
+    ax[1].set_xlabel("Time")
+    ax[1].set_ylabel("Value")
+
+    train_sizes, train_scores, test_scores  = learning_curve(
+            model,
             X,
             y,
-            cv=5,
+            cv=tscv,
             n_jobs=-1,
-            train_sizes=np.linspace(0.1, 1.0, 10),
             scoring="r2",
             shuffle=False,
             random_state=0
         )
-        display = LearningCurveDisplay(train_sizes=train_sizes,
-            train_scores=train_scores, test_scores=test_scores, score_name="R2")
-        display.plot(ax=axs[4])
-    
-        y_pred = best_model.predict(X_test[features.columns.tolist()][:600])
-        test_r2 = best_model.score(X_test[features.columns.tolist()][:600], y_test[:600])
-        test_mae = mean_absolute_error(y_test[:600], y_pred)
-        test_mse = mean_squared_error(y_test[:600], y_pred)
-        test_msle = mean_squared_log_error(y_test[:600], y_pred)
-        test_mape = mean_absolute_percentage_error(y_test[:600], y_pred)
-        print(f"R2 score on test set: {test_r2:.2f}")
-        print(f"MAE on test set: {test_mae:.2f}")
-        print(f"MSE on test set: {test_mse:.2f}")
-        print(f"MSLE on test set: {test_msle:.2f}")
-        print(f"MAPE on test set: {test_mape:.2f}%")
-    
-        PredictionErrorDisplay.from_predictions(
-            y_true=y_test[:600],
-            y_pred=y_pred,
-            kind="actual_vs_predicted",
-            subsample=100,
-            ax=axs[5],
-            random_state=0,
-        )
-        axs[5].set_title("Actual vs. Predicted Values")
-    
-        PredictionErrorDisplay.from_predictions(
-            y_true=y_test[:600],
-            y_pred=y_pred,
-            kind="residual_vs_predicted",
-            subsample=100,
-            ax=axs[6],
-            random_state=0,
-        )
-        axs[6].set_title("Residuals vs. Predicted Values")
-        plt.suptitle("Plotting cross-validated predictions")
-        
-        # Adjust layout and add super title
-        plt.suptitle(f"{model_name} Evaluation - {station_name}", fontsize=16)
-        plt.tight_layout()
-        plt.subplots_adjust(top=0.85)
-        plt.show()
+    display = LearningCurveDisplay(train_sizes=train_sizes,
+        train_scores=train_scores, test_scores=test_scores, score_name="Score")
+    display.plot(ax=ax[2])
+    ax[0].set_title("Learning Curve")
 
+    return ax
+    
 
 
     
