@@ -585,11 +585,11 @@ def plot_evaluate_model_over_time(data, data_cols,
                                     models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
                                     factor            = 1.5,
                                     window_size       = 10,
-                                    dendrogram        = False,
-                                    X_train= None,
-                                    y_train= None,
-                                    X_test= None,                                    
-                                    y_test= None):
+                                    dendrogram        = False,                                    
+                                    y_train         = None,                                   
+                                    y_test          = None,
+                                    y_fit           = None,
+                                    y_pred          = None):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -662,14 +662,13 @@ def plot_evaluate_model_over_time(data, data_cols,
                                                         model     = MRF_model,
                                                         display   = display,
                                                         ax        = evaluation(data_cols, 
-                                                                            list([axes[0,0],axes[0,1],axes[1,0],axes[1,1],axes[2,0]]), 
-                                                                            MRF_model, 
-                                                                            X_train, 
-                                                                            y_train, 
-                                                                            X_test, 
+                                                                            list([axes[0,0],axes[0,1],axes[1,0],axes[1,1],axes[2,0],axes[2,1],axes[3,0],axes[3,1]]), 
+                                                                            MRF_model,                                                                              
+                                                                            y_train,
                                                                             y_test, 
-                                                                            display,
-                                                                            n_sample=100)
+                                                                            y_fit, 
+                                                                            y_pred, 
+                                                                            display)
                                                         )
                 # print(f"🔹(IsolationForest, {MRF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
             
@@ -753,7 +752,7 @@ def plot_evaluate_model_over_time(data, data_cols,
 def MyRandomForestRegressor(data, data_cols, ax, model, display = False): 
     return
 
-def evaluation(data_cols, ax, model, X_train, y_train, X_test, y_test, display = False, n_sample=None):
+def evaluation(data_cols, ax, model, y_train, y_test, y_fit, y_pred, display = False):
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import IsolationForest    
     import matplotlib.pyplot as plt
@@ -762,107 +761,74 @@ def evaluation(data_cols, ax, model, X_train, y_train, X_test, y_test, display =
     from sklearn.model_selection import LearningCurveDisplay, learning_curve, TimeSeriesSplit, cross_val_score
     from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_squared_log_error, mean_absolute_percentage_error
 
-    X = X_train[data_cols] # or X = features
-    y = y_train
-
     model = model
-    model.fit(X, y)
 
-    # Sử dụng TimeSeriesSplit cho cross-validation
-    tscv = TimeSeriesSplit(n_splits=5)
-    # Predict anomaly
-    y_pred = model.predict(X_test[data_cols])
-    y_pred=pd.Series(y_pred, index=y_test.index)
-
-    metrics = {}
-    mae = mean_absolute_error(y_test, y_pred)
-    mse = mean_squared_error(y_test, y_pred)
-    msle = mean_squared_log_error(y_test, y_pred)
-    mape = mean_absolute_percentage_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    cv_scores = cross_val_score(model, X, y, cv=tscv, scoring='r2')
-    metrics = {
-        'R²': r2,
-        'MAE': mae,
-        'MSE': mse,
-        'MSLE': msle,
-        'MAPE': mape,
-        'CV R²': cv_scores.mean(),
-        'CV R² Std': cv_scores.std()
-    }
-
-    metrics_df = pd.DataFrame([metrics])
-    print(metrics_df)
-
-
-    ax[0].plot(y_train.index, y_train.values, label='Before', color='blue')
-    ax[0].plot(y_test.index, y_test.values, label='Observed', color='red')
-    ax[0].plot(y_pred.index, y_pred.values, label='Forecasting', color='green')
+    ax[0].plot(y_train.index, y_train.values, label=f'Origin {y_train.name}', color='blue')
+    ax[0].plot(y_test.index, y_test.values, label=f'Observed {y_test.name}', color='orange')
+    ax[0].plot(y_pred.index, y_pred.values, label=f'Forecasting {y_pred.columns[0]}', color='green')
     ax[0].set_title("Forecasting Results")
     ax[0].set_xlabel("Time")
     ax[0].set_ylabel("Value")
     ax[0].legend()
     ax[0].grid(True)
 
-    if n_sample is None:
-        indices = np.arange(len(y_test))
-    else:
-        step = max(1, len(y_test) // n_sample)  # Tính bước nhảy
-        indices = np.arange(0, len(y_test), step, dtype=int)  # Lấy mẫu đều
-
-    ax[1].plot(y_test.index[indices], y_test.values[indices], label="Observed", color="red")
-    ax[1].plot(y_pred.index[indices], y_pred.values[indices], label="Forecasting", color="green", alpha=0.7)
-    ax[1].set_title(f"Forecasting Results with {n_sample} sample")
+    ax[1].plot(y_test.index, y_test.values, label=f"Observed {y_test.name}", color="orange", linewidth=2)
+    ax[1].plot(y_pred.index, y_pred.values, label=f"Forecasting {y_pred.columns[0]}", color="green")
+    ax[1].set_title(f"Forecasting Results on test data")
     ax[1].set_xlabel("Time")
     ax[1].set_ylabel("Value")
     ax[1].legend()
     ax[1].grid(True)
 
-    train_sizes, train_scores, test_scores  = learning_curve(
-            model,
-            X,
-            y,
-            cv=tscv,
-            n_jobs=-1,
-            scoring="r2",
-            shuffle=False,
-            random_state=0
-        )
-    display = LearningCurveDisplay(train_sizes=train_sizes,
-        train_scores=train_scores, test_scores=test_scores, score_name="Score")
-    display.plot(ax=ax[2])
-    ax[2].set_title("Learning Curve")
+    # Tính metrics train/test
+    metrics = {
+        'R²': {
+            "train": r2_score(y_train, y_fit),
+            "test": r2_score(y_test, y_pred)
+        },
+        'MAE': {
+            "train": mean_absolute_error(y_train, y_fit),
+            "test": mean_absolute_error(y_test, y_pred)
+        },
+        'MSE': {
+            "train": mean_squared_error(y_train, y_fit),
+            "test": mean_squared_error(y_test, y_pred)
+        },
+        'MSLE': {
+            "train": mean_squared_log_error(y_train, y_fit),
+            "test": mean_squared_log_error(y_test, y_pred)
+        },
+        'MAPE': {
+            "train": mean_absolute_percentage_error(y_train, y_fit),
+            "test": mean_absolute_percentage_error(y_test, y_pred)
+        }
+    }
+
+    # Chuyển sang DataFrame
+    metrics_df = pd.DataFrame(metrics)
+
+    bar_width = 0.4
+    index = np.arange(len(metrics_df.columns))
+
+    # Plot bars
+    train_bars = ax[2].bar(index, metrics_df.loc['train'], bar_width, label='Train', color='blue')
+    test_bars = ax[2].bar(index + bar_width, metrics_df.loc['test'], bar_width, label='Test', color='orange')
+
+    # Add numerical labels on top of bars
+    for bars in [train_bars, test_bars]:
+        for bar in bars:
+            height = bar.get_height()
+            ax[2].text(bar.get_x() + bar.get_width() / 2, height, f'{height:.6f}', 
+                    ha='center', va='bottom', fontsize=9)
+
+    # Customize axes
+    ax[2].set_xlabel('Metrics')
+    ax[2].set_ylabel('Score')
+    ax[2].set_title('Train vs Test Metrics')
+    ax[2].set_xticks(index + bar_width / 2)
+    ax[2].set_xticklabels(metrics_df.columns)
+    ax[2].legend()
     ax[2].grid(True)
-
-    # Forecast Error
-    forecast_error = y_test - y_pred
-
-    # Tracking Signals
-    mad = np.mean(np.abs(forecast_error))
-    tracking_signals = np.cumsum(forecast_error) / mad
-    upper_limit = 6 * mad
-    lower_limit = -6 * mad
-    print("MAD:", mad)
-    print("Upper Limit:", upper_limit)
-    print("Lower Limit:", lower_limit)
-
-    # 2. Forecast Error (stem plot with sampling)
-    ax[3].stem(np.arange(len(forecast_error))[indices],
-          forecast_error.values[indices],
-          basefmt=" ")
-    ax[3].set_title(f"Forecast Error with {n_sample} sample")
-    ax[3].set_ylabel("Error")
-    ax[3].grid(True)
-
-    # 3. Tracking Signals (stem plot with sampling)
-    ax[4].stem(np.arange(len(forecast_error))[indices],
-                 tracking_signals.values[indices],
-                 basefmt=" ")
-    ax[4].axhline(upper_limit, color='orange')
-    ax[4].axhline(lower_limit, color='yellow')
-    ax[4].set_title(f"Tracking Signals with {n_sample} sample")
-    ax[4].set_ylabel("Signal")
-    ax[4].grid(True)
 
     return ax
     
