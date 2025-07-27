@@ -760,7 +760,11 @@ def MyHDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
     outlier_indices = np.where(labels == -1)[0]
 
     return outlier_indices
-def MyVanillaAutoencoder(data, data_cols, ax, display = False, window_size=10, epochs=10, batch_size=32):
+def MyVanillaAutoencoder(data, data_cols, ax, 
+                         display     =  False, 
+                         window_size = 10, 
+                         epochs      = 10, 
+                         batch_size  = 32):
     import numpy as np
     import pandas as pd
     import tensorflow as tf

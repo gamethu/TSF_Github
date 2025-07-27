@@ -1,0 +1,12 @@
+1. conda create --name tf python=3.11.9
+2.1. conda deactivate
+2.2. conda activate tf
+3. conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
+4. pip install --upgrade pip
+5. pip install -r requirements.txt
+
+6. python -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
+7. python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+
+
+8. Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
