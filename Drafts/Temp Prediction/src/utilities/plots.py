@@ -573,23 +573,19 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
         ax[1].grid(True, axis="y")        
 
 # Custom evaluation function to replace plots.evaluate_model
-def plot_evaluate_model_over_time(data, data_cols,
-                                    station_name      = None,
-                                    method            = "statistic",
-                                    display           = False,
-                                    start_time        = None,
-                                    end_time          = None,
-                                    freq              = None,
-                                    z_thresh          = 3,
-                                    modified_z_thresh = 3.5, 
-                                    models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
-                                    factor            = 1.5,
-                                    window_size       = 10,
-                                    dendrogram        = False,                                    
-                                    y_train         = None,                                   
-                                    y_test          = None,
-                                    y_fit           = None,
-                                    y_pred          = None):
+def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, y_pred,
+                                  method           = "short",
+                                  evaluate_metrics = dict({
+                                                      "R2"   : "r2_score",   
+                                                    #   "MAE"  : "mean_absolute_error",
+                                                    #   "MSE"  : "mean_squared_error",
+                                                    #   "MSLE" : "mean_squared_log_error",
+                                                    #   "MAPE" : "mean_absolute_percentage_error"
+                                                      }),
+                                  display          = False,
+                                  start_time       = None,
+                                  end_time         = None,
+                                  freq             = None):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -623,119 +619,97 @@ def plot_evaluate_model_over_time(data, data_cols,
 
         df_filtered = df_filtered.set_index('time')
 
-        if method == "statistic":
+        if method == "short":
             fig, axes = plt.subplots(2, 2, figsize=(20, 10))
             
-            from models.anomaly_models import (MyZ_Score,
-                                                MyZ_Score_modified)
+            # from models.anomaly_models import (MyZ_Score,
+            #                                     MyZ_Score_modified)
             
-            for row, sub_method in enumerate(["z_score", "z_score modified"]):
-                if sub_method == "z_score":
-                    Z_outlier = MyZ_Score(data      = df_filtered,
-                                            data_cols = feature,
-                                            display   = display,
-                                            z_thresh  = z_thresh,
-                                            ax        = list([axes[0,0], axes[0,1]]))
-                    print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
+            # for row, sub_method in enumerate(["z_score", "z_score modified"]):
+            #     if sub_method == "z_score":
+            #         Z_outlier = MyZ_Score(data      = df_filtered,
+            #                                 data_cols = feature,
+            #                                 display   = display,
+            #                                 z_thresh  = z_thresh,
+            #                                 ax        = list([axes[0,0], axes[0,1]]))
+            #         print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
 
-                elif sub_method == "z_score modified":
-                    ZM_outlier = MyZ_Score_modified(data              = df_filtered,
-                                                    data_cols         = feature,
-                                                    display           = display,
-                                                    modified_z_thresh = modified_z_thresh,
-                                                    ax                  = list([axes[1,0], axes[1,1]]))
-                    print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
-        elif method == "machine_learning":        
-            fig, axes = plt.subplots(4, 2, figsize=(20, 20))
+            #     elif sub_method == "z_score modified":
+            #         ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+            #                                         data_cols         = feature,
+            #                                         display           = display,
+            #                                         modified_z_thresh = modified_z_thresh,
+            #                                         ax                  = list([axes[1,0], axes[1,1]]))
+            #         print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+        elif method == "full":        
+            fig, axes = plt.subplots(6, 2, figsize=(20, 20))
             
-            from models.anomaly_models import (MyIsolationForest,
-                                               MyLocalOutlierFactor,
-                                               MyProphet,
-                                               MyAgglomerativeClustering,
-                                               MyDBSCAN,
-                                               MyVanillaAutoencoder)
+            from scripts.evaluate_model import (My_R2_SCORE,
+                                                My_MAE_SCORE,
+                                                My_MSE_SCORE,
+                                                My_MSLE_SCORE,
+                                                My_MAPE_SCORE)
+            # Option 1
+            if evaluate_metrics.get("R2") is not None:
+                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                                                            y_pred    = y_pred,
+                                                            y_true    = y_true,
+                                                            display   = display,
+                                                            ax        = list([axes[0,0],axes[0,1]]))
+                print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
             
-            if models.get("RandomForestRegressor") is not None:
-                MRF_model   = models.get("RandomForestRegressor")
-                MRF_outlier = MyRandomForestRegressor(data      = df_filtered,
-                                                        data_cols = data_cols,
-                                                        model     = MRF_model,
-                                                        display   = display,
-                                                        ax        = evaluation(data_cols, 
-                                                                            list([axes[0,0],axes[0,1],axes[1,0],axes[1,1],axes[2,0],axes[2,1],axes[3,0],axes[3,1]]), 
-                                                                            MRF_model,                                                                              
-                                                                            y_train,
-                                                                            y_test, 
-                                                                            y_fit, 
-                                                                            y_pred, 
-                                                                            display)
-                                                        )
-                # print(f"🔹(IsolationForest, {MRF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
-            
-            # # Option 1
-            # if models.get("IsolationForest") is not None:
-            #     MIF_model   = models.get("IsolationForest")
-            #     MIF_outlier = MyIsolationForest(data      = df_filtered,
-            #                                     data_cols = feature,
-            #                                     model     = MIF_model,
-            #                                     display   = display,
-            #                                     ax        = axes[0,0])
-            #     print(f"🔹 {feature} (IsolationForest, {MIF_model}): {len(MIF_outlier)} outliers ~ {len(MIF_outlier)/len(df_filtered[feature]):.2%}")
-            
-            # # Option 2
-            # if models.get("LocalOutlierFactor") is not None:
-            #     MLOF_model   = models.get("LocalOutlierFactor")
-            #     MLOF_outlier = MyLocalOutlierFactor(data      = df_filtered,
-            #                                         data_cols = feature,
-            #                                         model     = MLOF_model,
-            #                                         display   = display,
-            #                                         ax        = axes[0,1])
-            #     print(f"🔹 {feature} (LocalOutlierFactor, {MLOF_model}): {len(MLOF_outlier)} outliers ~ {len(MLOF_outlier)/len(df_filtered[feature]):.2%}")
-            
-            # # Option 3
-            # if models.get("Prophet") is not None:
-            #     MP_model   = deepcopy(models.get("Prophet"))
-            #     MP_outlier = MyProphet(data      = df_filtered.reset_index(), # Slow!!!
-            #                             data_cols = feature,
-            #                             model     = MP_model,
-            #                             display   = display,
-            #                             factor    = factor,
-            #                             ax        = list([axes[1,0],axes[1,1]]))
-            #     print(f"🔹 {feature} (Prophet, {MP_model}): {len(MP_outlier)} outliers ~ {len(MP_outlier)/len(df_filtered[feature]):.2%}")
-            
-            # # Option 4
-            # if models.get("AgglomerativeClustering") is not None:
-            #     MAC_model   = deepcopy(models.get("AgglomerativeClustering"))
-            #     MAC_outlier = MyAgglomerativeClustering(data        = df_filtered.reset_index(), # Slow!!!
-            #                                             data_cols   = feature,
-            #                                             model       = MAC_model,
-            #                                             display     = display,
-            #                                             window_size = window_size,
-            #                                             dendrogram  = dendrogram,
-            #                                             ax          = list([axes[2,0],axes[2,1]]))
-            #     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
-            
-            # # Option 5
-            # if models.get("DBSCAN") is not None:
-            #     M_model   = deepcopy(models.get("DBSCAN"))
-            #     M_outlier = MyDBSCAN(data        = df_filtered.reset_index(), # Slow!!!
-            #                             data_cols   = feature,
-            #                             model       = M_model,
-            #                             display     = display,
-            #                             window_size = window_size,
-            #                             ax          = axes[3,0])
-            #     print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
-            
+            # Option 2
+            if evaluate_metrics.get("MAE") is not None:
+                MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(
+                                                               data_cols = target_cols_name,
+                                                               y_pred    = y_pred,
+                                                               y_true    = y_true,
+                                                               display   = display,
+                                                               ax        = list([axes[1,0],axes[1,1]]))
+                print(f"🔹 {target_cols_name}_{name} (MAE_train): {MAE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAE_test): {MAE_SCORE_TEST}")
+              
+            # Option 3
+            if evaluate_metrics.get("MSE") is not None:
+                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
+                                                               y_pred    = y_pred,
+                                                               y_true    = y_true,
+                                                               display   = display,
+                                                               ax        = list([axes[2,0],axes[2,1]]))
+                print(f"🔹 {target_cols_name}_{name} (MSE_train): {MSE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSE_test): {MSE_SCORE_TEST}")
+              
+            # Option 4
+            if evaluate_metrics.get("MSLE") is not None:
+                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
+                                                                  y_pred    = y_pred,
+                                                                  y_true    = y_true,
+                                                                  display   = display,
+                                                                  ax        = list([axes[3,0],axes[3,1]]))
+                print(f"🔹 {target_cols_name}_{name} (MSLE_train): {MSLE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSLE_test): {MSLE_SCORE_TEST}")
+              
+            # Option 5
+            if evaluate_metrics.get("MAPE") is not None:
+                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                  y_pred    = y_pred,
+                                                                  y_true    = y_true,
+                                                                  display   = display,
+                                                                  ax        = list([axes[4,0],axes[4,1]]))
+                print(f"🔹 {target_cols_name}_{name} (MAPE_train): {MAPE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAPE_test): {MAPE_SCORE_TEST}")
+              
             # # Option 6
-            # if models.get("VanillaAutoencoder") is not None:
-            #     # MVA_model   = deepcopy(models.get("VanillaAutoencoder"))
-            #     MVA_outlier = MyVanillaAutoencoder(data        = df_filtered.reset_index(), # Slow!!!
-            #                                         data_cols   = feature,
-            #                                         display     = display,
-            #                                     #    model       = MVA_model,
-            #                                         ax          = axes[3,1])
-            #     print(f"🔹 {feature} (VanillaAutoencoder): {len(MVA_outlier)} outliers ~ {len(MVA_outlier)/len(df_filtered[feature]):.2%}")
-            
+            # if evaluate_metrics.get("R2") is not None:
+            #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+            #                                                 y_pred    = y_pred,
+            #                                                 y_true    = y_true,
+            #                                                 display   = display,
+            #                                                 ax        = list([axes[0,0],axes[0,1]]))
+            #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
+            #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+              
         else:
             raise ValueError(f"Giá trị method không hợp lệ: {method}")
 
@@ -748,92 +722,6 @@ def plot_evaluate_model_over_time(data, data_cols,
 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
-    
-def MyRandomForestRegressor(data, data_cols, ax, model, display = False): 
-    return
-
-def evaluation(data_cols, ax, model, y_train, y_test, y_fit, y_pred, display = False):
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.ensemble import IsolationForest    
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import pandas as pd
-    from sklearn.model_selection import LearningCurveDisplay, learning_curve, TimeSeriesSplit, cross_val_score
-    from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_squared_log_error, mean_absolute_percentage_error
-
-    model = model
-
-    ax[0].plot(y_train.index, y_train.values, label=f'Origin {y_train.name}', color='blue')
-    ax[0].plot(y_test.index, y_test.values, label=f'Observed {y_test.name}', color='orange')
-    ax[0].plot(y_pred.index, y_pred.values, label=f'Forecasting {y_pred.columns[0]}', color='green')
-    ax[0].set_title("Forecasting Results")
-    ax[0].set_xlabel("Time")
-    ax[0].set_ylabel("Value")
-    ax[0].legend()
-    ax[0].grid(True)
-
-    ax[1].plot(y_test.index, y_test.values, label=f"Observed {y_test.name}", color="orange", linewidth=2)
-    ax[1].plot(y_pred.index, y_pred.values, label=f"Forecasting {y_pred.columns[0]}", color="green")
-    ax[1].set_title(f"Forecasting Results on test data")
-    ax[1].set_xlabel("Time")
-    ax[1].set_ylabel("Value")
-    ax[1].legend()
-    ax[1].grid(True)
-
-    # Tính metrics train/test
-    metrics = {
-        'R²': {
-            "train": r2_score(y_train, y_fit),
-            "test": r2_score(y_test, y_pred)
-        },
-        'MAE': {
-            "train": mean_absolute_error(y_train, y_fit),
-            "test": mean_absolute_error(y_test, y_pred)
-        },
-        'MSE': {
-            "train": mean_squared_error(y_train, y_fit),
-            "test": mean_squared_error(y_test, y_pred)
-        },
-        'MSLE': {
-            "train": mean_squared_log_error(y_train, y_fit),
-            "test": mean_squared_log_error(y_test, y_pred)
-        },
-        'MAPE': {
-            "train": mean_absolute_percentage_error(y_train, y_fit),
-            "test": mean_absolute_percentage_error(y_test, y_pred)
-        }
-    }
-
-    # Chuyển sang DataFrame
-    metrics_df = pd.DataFrame(metrics)
-
-    bar_width = 0.4
-    index = np.arange(len(metrics_df.columns))
-
-    # Plot bars
-    train_bars = ax[2].bar(index, metrics_df.loc['train'], bar_width, label='Train', color='blue')
-    test_bars = ax[2].bar(index + bar_width, metrics_df.loc['test'], bar_width, label='Test', color='orange')
-
-    # Add numerical labels on top of bars
-    for bars in [train_bars, test_bars]:
-        for bar in bars:
-            height = bar.get_height()
-            ax[2].text(bar.get_x() + bar.get_width() / 2, height, f'{height:.6f}', 
-                    ha='center', va='bottom', fontsize=9)
-
-    # Customize axes
-    ax[2].set_xlabel('Metrics')
-    ax[2].set_ylabel('Score')
-    ax[2].set_title('Train vs Test Metrics')
-    ax[2].set_xticks(index + bar_width / 2)
-    ax[2].set_xticklabels(metrics_df.columns)
-    ax[2].legend()
-    ax[2].grid(True)
-
-    return ax
-    
-
-
     
 
 
