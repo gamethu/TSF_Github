@@ -409,9 +409,9 @@ def evaluate_feature_outliers_over_time(data, data_cols,
             df_filtered = df_filtered[df_filtered['time'] <= end_time_]
 
         if freq:
-            df_filtered = df_filtered.set_index('time')
+            df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -613,9 +613,9 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
             df_filtered = df_filtered[df_filtered['time'] <= end_time_]
 
         if freq:
-            df_filtered = df_filtered.set_index('time')
+            df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -642,7 +642,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
             #                                         ax                  = list([axes[1,0], axes[1,1]]))
             #         print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
         elif method == "full":        
-            fig, axes = plt.subplots(6, 2, figsize=(20, 20))
+            fig, axes = plt.subplots(6, 2, figsize=(20, 30))
             
             from scripts.evaluate_model import (My_R2_SCORE,
                                                 My_MAE_SCORE,
@@ -655,9 +655,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                             y_pred    = y_pred,
                                                             y_true    = y_true,
                                                             display   = display,
+                                                            freq      = freq,
                                                             ax        = list([axes[0,0],axes[0,1]]))
-                print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+                print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
+                print()
             
             # Option 2
             if evaluate_metrics.get("MAE") is not None:
@@ -666,9 +668,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
                                                                display   = display,
+                                                               freq      = freq,
                                                                ax        = list([axes[1,0],axes[1,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MAE_train): {MAE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAE_test): {MAE_SCORE_TEST}")
+                print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
+                print()
               
             # Option 3
             if evaluate_metrics.get("MSE") is not None:
@@ -676,9 +680,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
                                                                display   = display,
+                                                               freq      = freq,
                                                                ax        = list([axes[2,0],axes[2,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MSE_train): {MSE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSE_test): {MSE_SCORE_TEST}")
+                print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
+                print()
               
             # Option 4
             if evaluate_metrics.get("MSLE") is not None:
@@ -686,9 +692,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
                                                                   display   = display,
+                                                                  freq      = freq,
                                                                   ax        = list([axes[3,0],axes[3,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MSLE_train): {MSLE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSLE_test): {MSLE_SCORE_TEST}")
+                print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
+                print()
               
             # Option 5
             if evaluate_metrics.get("MAPE") is not None:
@@ -696,9 +704,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
                                                                   display   = display,
+                                                                  freq      = freq,
                                                                   ax        = list([axes[4,0],axes[4,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MAPE_train): {MAPE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAPE_test): {MAPE_SCORE_TEST}")
+                print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
+                print()
               
             # # Option 6
             # if evaluate_metrics.get("R2") is not None:
@@ -706,9 +716,11 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
             #                                                 y_pred    = y_pred,
             #                                                 y_true    = y_true,
             #                                                 display   = display,
+            #                                                 freq      = freq,
             #                                                 ax        = list([axes[0,0],axes[0,1]]))
             #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
             #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+            #     print()
               
         else:
             raise ValueError(f"Giá trị method không hợp lệ: {method}")
