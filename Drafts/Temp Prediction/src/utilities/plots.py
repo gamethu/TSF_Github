@@ -659,7 +659,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                             ax        = list([axes[0,0],axes[0,1]]))
                 print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
-                print()
+                print()                    
             
             # Option 2
             if evaluate_metrics.get("MAE") is not None:
