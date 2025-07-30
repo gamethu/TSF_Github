@@ -38,13 +38,13 @@ else:
     raise ValueError('Unknown framework.')
 
 setup(
-    name=f'nbeats-{FRAMEWORK}',
-    version=BASE_VERSION,
-    description='N-Beats',
-    author='Philippe Remy (Pytorch), Jean Sebastien Dhr (Keras)',
-    license='MIT',
-    long_description_content_type='text/markdown',
-    long_description=open('README.md').read(),
-    packages=LIB_PACKAGE,
-    install_requires=INSTALL_REQUIRES
+    name                         = f'nbeats-{FRAMEWORK}',
+    version                      = BASE_VERSION,
+    description                  = 'N-Beats',
+    author                       = 'Philippe Remy (Pytorch), Jean Sebastien Dhr (Keras)',
+    license                      = 'MIT',
+    long_description_content_type= 'text/markdown',
+    long_description             = open('README.md').read(),
+    packages                     = LIB_PACKAGE,
+    install_requires             = INSTALL_REQUIRES
 )

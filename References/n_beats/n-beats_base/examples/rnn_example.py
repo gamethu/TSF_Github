@@ -6,6 +6,12 @@
 # without much tuning, N-Beats can achieve a 23% reduction in loss compared to the last value benchmark.
 #
 
+#ALERTS: GPU required
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import os
 
 import numpy      as np

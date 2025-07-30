@@ -12,3 +12,6 @@
 
 
 8. Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+✅ Cách xóa toàn bộ các package pip hiện có (không cần dựa vào requirements.txt):
+pip freeze > to_remove.txt && pip uninstall -y -r to_remove.txt && del to_remove.txt
