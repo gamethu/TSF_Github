@@ -181,7 +181,7 @@ def plot_feature_outliers_over_time(data, data_cols,
                                     modified_z_thresh = 3.5, 
                                     models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
                                     factor            = 1.5,
-                                    window_size       = 10,
+                                    step_size       = 10,
                                     dendrogram        = False):
     import seaborn as sns
     import pandas as pd
@@ -287,7 +287,7 @@ def plot_feature_outliers_over_time(data, data_cols,
                                                             data_cols   = feature,
                                                             model       = MAC_model,
                                                             display     = display,
-                                                            window_size = window_size,
+                                                            step_size = step_size,
                                                             dendrogram  = dendrogram,
                                                             ax          = list([axes[2,0],axes[2,1]]))
                     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
@@ -299,7 +299,7 @@ def plot_feature_outliers_over_time(data, data_cols,
                                          data_cols   = feature,
                                          model       = M_model,
                                          display     = display,
-                                         window_size = window_size,
+                                         step_size = step_size,
                                          ax          = axes[3,0])
                     print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
                 
@@ -379,7 +379,7 @@ def evaluate_feature_outliers_over_time(data, data_cols,
                                     modified_z_thresh = 3.5, 
                                     models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
                                     factor            = 1.5,
-                                    window_size       = 10,
+                                    step_size       = 10,
                                     dendrogram        = False):
     import seaborn as sns
     import pandas as pd
@@ -485,7 +485,7 @@ def evaluate_feature_outliers_over_time(data, data_cols,
                                                             data_cols   = feature,
                                                             model       = MAC_model,
                                                             display     = False,
-                                                            window_size = window_size,
+                                                            step_size = step_size,
                                                             dendrogram  = dendrogram,
                                                             ax          = None)
                     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
@@ -497,7 +497,7 @@ def evaluate_feature_outliers_over_time(data, data_cols,
                                          data_cols   = feature,
                                          model       = M_model,
                                          display     = False,
-                                         window_size = window_size,
+                                         step_size = step_size,
                                          ax          = None)
                     print(f"🔹 {feature} (DBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
                     custom_evaluate_model(df_filtered[feature], M_outlier, station_name, feature, list([axes[4,0], axes[4,1]]), "DBSCAN")
@@ -585,6 +585,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                   display          = False,
                                   start_time       = None,
                                   end_time         = None,
+                                  step_size        = 24,
                                   freq             = None):
     import seaborn as sns
     import pandas as pd
@@ -620,27 +621,88 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
         df_filtered = df_filtered.set_index('time')
 
         if method == "short":
-            fig, axes = plt.subplots(2, 2, figsize=(20, 10))
+            from scripts.evaluate_model import (My_R2_SCORE,
+                                                My_MAE_SCORE,
+                                                My_MSE_SCORE,
+                                                My_MSLE_SCORE,
+                                                My_MAPE_SCORE)
+            # Option 1
+            if evaluate_metrics.get("R2") is not None:
+                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols   = target_cols_name,
+                                                            y_pred      = y_pred,
+                                                            y_true      = y_true,
+                                                            display     = False,
+                                                            step_size   = step_size,
+                                                            freq        = freq,
+                                                            ax          = None)
+                print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
+                print()                    
             
-            # from models.anomaly_models import (MyZ_Score,
-            #                                     MyZ_Score_modified)
-            
-            # for row, sub_method in enumerate(["z_score", "z_score modified"]):
-            #     if sub_method == "z_score":
-            #         Z_outlier = MyZ_Score(data      = df_filtered,
-            #                                 data_cols = feature,
-            #                                 display   = display,
-            #                                 z_thresh  = z_thresh,
-            #                                 ax        = list([axes[0,0], axes[0,1]]))
-            #         print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
-
-            #     elif sub_method == "z_score modified":
-            #         ZM_outlier = MyZ_Score_modified(data              = df_filtered,
-            #                                         data_cols         = feature,
-            #                                         display           = display,
-            #                                         modified_z_thresh = modified_z_thresh,
-            #                                         ax                  = list([axes[1,0], axes[1,1]]))
-            #         print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+            # Option 2
+            if evaluate_metrics.get("MAE") is not None:
+                MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(
+                                                               data_cols   = target_cols_name,
+                                                               y_pred      = y_pred,
+                                                               y_true      = y_true,
+                                                               display     = False,
+                                                               step_size   = step_size,
+                                                               freq        = freq,
+                                                               ax          = None)
+                print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
+                print()
+              
+            # Option 3
+            if evaluate_metrics.get("MSE") is not None:
+                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols   = target_cols_name,
+                                                               y_pred      = y_pred,
+                                                               y_true      = y_true,
+                                                               display     = False,
+                                                               step_size   = step_size,
+                                                               freq        = freq,
+                                                               ax          = None)
+                print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
+                print()
+              
+            # Option 4
+            if evaluate_metrics.get("MSLE") is not None:
+                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
+                                                                  y_pred      = y_pred,
+                                                                  y_true      = y_true,
+                                                                  display     = False,
+                                                                  step_size   = step_size,
+                                                                  freq        = freq,
+                                                                  ax          = None)
+                print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
+                print()
+              
+            # Option 5
+            if evaluate_metrics.get("MAPE") is not None:
+                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
+                                                                  y_pred      = y_pred,
+                                                                  y_true      = y_true,
+                                                                  display     = False,
+                                                                  step_size   = step_size,
+                                                                  freq        = freq,
+                                                                  ax          = None)
+                print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
+                print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
+                print()
+              
+            # # Option 6
+            # if evaluate_metrics.get("R2") is not None:
+            #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+            #                                                 y_pred    = y_pred,
+            #                                                 y_true    = y_true,
+            #                                                 display   = False,
+            #                                                 freq      = freq,
+            #                                                 ax        = None)
+            #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
+            #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+            #     print()
         elif method == "full":        
             fig, axes = plt.subplots(6, 2, figsize=(20, 30))
             
@@ -651,12 +713,13 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                 My_MAPE_SCORE)
             # Option 1
             if evaluate_metrics.get("R2") is not None:
-                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
-                                                            y_pred    = y_pred,
-                                                            y_true    = y_true,
-                                                            display   = display,
-                                                            freq      = freq,
-                                                            ax        = list([axes[0,0],axes[0,1]]))
+                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols   = target_cols_name,
+                                                            y_pred      = y_pred,
+                                                            y_true      = y_true,
+                                                            display     = display,
+                                                            step_size   = step_size,
+                                                            freq        = freq,
+                                                            ax          = list([axes[0,0],axes[0,1]]))
                 print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
                 print()                    
@@ -664,48 +727,52 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
             # Option 2
             if evaluate_metrics.get("MAE") is not None:
                 MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(
-                                                               data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = display,
-                                                               freq      = freq,
-                                                               ax        = list([axes[1,0],axes[1,1]]))
+                                                               data_cols   = target_cols_name,
+                                                               y_pred      = y_pred,
+                                                               y_true      = y_true,
+                                                               display     = display,
+                                                               step_size   = step_size,
+                                                               freq        = freq,
+                                                               ax          = list([axes[1,0],axes[1,1]]))
                 print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
                 print()
               
             # Option 3
             if evaluate_metrics.get("MSE") is not None:
-                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = display,
-                                                               freq      = freq,
-                                                               ax        = list([axes[2,0],axes[2,1]]))
+                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols   = target_cols_name,
+                                                               y_pred      = y_pred,
+                                                               y_true      = y_true,
+                                                               display     = display,
+                                                               step_size   = step_size,
+                                                               freq        = freq,
+                                                               ax          = list([axes[2,0],axes[2,1]]))
                 print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
                 print()
               
             # Option 4
             if evaluate_metrics.get("MSLE") is not None:
-                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = display,
-                                                                  freq      = freq,
-                                                                  ax        = list([axes[3,0],axes[3,1]]))
+                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
+                                                                  y_pred      = y_pred,
+                                                                  y_true      = y_true,
+                                                                  display     = display,
+                                                                  step_size   = step_size,
+                                                                  freq        = freq,
+                                                                  ax          = list([axes[3,0],axes[3,1]]))
                 print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
                 print()
               
             # Option 5
             if evaluate_metrics.get("MAPE") is not None:
-                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = display,
-                                                                  freq      = freq,
-                                                                  ax        = list([axes[4,0],axes[4,1]]))
+                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
+                                                                  y_pred      = y_pred,
+                                                                  y_true      = y_true,
+                                                                  display     = display,
+                                                                  step_size   = step_size,
+                                                                  freq        = freq,
+                                                                  ax          = list([axes[4,0],axes[4,1]]))
                 print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
                 print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
                 print()

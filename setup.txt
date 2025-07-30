@@ -5,8 +5,10 @@
 4. pip install --upgrade pip
 5. pip install -r requirements.txt
 
-6. python -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
-7. python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+6.1. python -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
+6.2. python3 -c "import tensorflow as tf; print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
+7.1. python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+7.2. python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 
 
 8. Set-ExecutionPolicy RemoteSigned -Scope CurrentUser

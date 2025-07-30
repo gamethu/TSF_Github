@@ -49,6 +49,7 @@ def plot_CF_aproach2(y_true, y_pred):
 def My_R2_SCORE(y_pred, y_true,
                 data_cols = "Unknown",
                 display   = False, 
+                step_size = 24,
                 freq      = None,
                 ax        = None):
     y_train_true = y_true[0]
@@ -69,7 +70,7 @@ def My_R2_SCORE(y_pred, y_true,
         print("y_train phải lớn hơn y_test")
         return
 
-    step_size = 24
+    step_size = step_size
     if n_test < step_size:
         ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
         step_size = ws_test[1] - ws_test[0]
@@ -147,6 +148,7 @@ def My_R2_SCORE(y_pred, y_true,
 def My_MAE_SCORE(y_pred, y_true,
                  data_cols = "Unknown",
                  display   = False, 
+                 step_size = 24,
                  freq      = None,
                  ax        = None):
 
@@ -168,7 +170,7 @@ def My_MAE_SCORE(y_pred, y_true,
         print("y_train phải lớn hơn y_test")
         return
 
-    step_size = 24
+    step_size = step_size
     if n_test < step_size:
         ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
         step_size = ws_test[1] - ws_test[0]
@@ -247,6 +249,7 @@ def My_MAE_SCORE(y_pred, y_true,
 def My_MSE_SCORE(y_pred, y_true,
                  data_cols = "Unknown",
                  display   = False, 
+                 step_size = 24,
                  freq      = None,
                  ax        = None):
 
@@ -268,7 +271,7 @@ def My_MSE_SCORE(y_pred, y_true,
         print("y_train phải lớn hơn y_test")
         return
 
-    step_size = 24
+    step_size = step_size
     if n_test < step_size:
         ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
         step_size = ws_test[1] - ws_test[0]
@@ -346,6 +349,7 @@ def My_MSE_SCORE(y_pred, y_true,
 def My_MSLE_SCORE(y_pred, y_true,
                   data_cols = "Unknown",
                   display   = False, 
+                  step_size = 24,
                   freq      = None,
                   ax        = None):
 
@@ -367,7 +371,7 @@ def My_MSLE_SCORE(y_pred, y_true,
         print("y_train phải lớn hơn y_test")
         return
 
-    step_size = 24
+    step_size = step_size
     if n_test < step_size:
         ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
         step_size = ws_test[1] - ws_test[0]
@@ -445,6 +449,7 @@ def My_MSLE_SCORE(y_pred, y_true,
 def My_MAPE_SCORE(y_pred, y_true,
                   data_cols = "Unknown",
                   display   = False, 
+                  step_size = 24,
                   freq      = None,
                   ax        = None):
     y_train_true = y_true[0]
@@ -465,7 +470,7 @@ def My_MAPE_SCORE(y_pred, y_true,
         print("y_train phải lớn hơn y_test")
         return
 
-    step_size = 24
+    step_size = step_size
     if n_test < step_size:
         ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
         step_size = ws_test[1] - ws_test[0]
