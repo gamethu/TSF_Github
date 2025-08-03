@@ -846,25 +846,34 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
 
         df_filtered = df_filtered.set_index('time')
 
+        # Set defaul params for model
+        model.set_params(**dict({k : v[0] for k,v in params.items()}))
+        print("default_model: ", model)
+        
         if method == "short":
             from scripts.evaluate_model import (My_R2_SCORE,
                                                 My_MAE_SCORE,
                                                 My_MSE_SCORE,
                                                 My_MSLE_SCORE,
                                                 My_MAPE_SCORE)
-            for key in params.keys():
+            global_d     = dict({})
+            global_total = len(params)
+            global_best  = 0
+            for i, key in enumerate(params.keys(), 1):
+                print(f"Lap: {i}/{global_total}")
                 # Option 1
                 if evaluate_metrics.get("R2") is not None:
-                    d = dict({})
+                    local_d = dict({})
                     for values in params[key]:
-                        temp_model = model.set_params(**{key: values})
-                        temp_model = temp_model.fit(x_fit[0],y_true[0])
-                        y_fit      = list([pd.DataFrame(data    = temp_model.predict(x_fit[0]), 
-                                                index   = y_true[0].index, 
-                                                columns = [y_true[0].name]),
-                                           pd.DataFrame(data    = temp_model.predict(x_fit[1]), 
-                                                        index   = y_true[1].index, 
-                                                        columns = [y_true[1].name])])
+                        local_model = deepcopy(model)
+                        local_model = local_model.set_params(**{key: values})
+                        local_model = local_model.fit(x_fit[0],y_true[0])
+                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                         index   = y_true[0].index, 
+                                                         columns = [y_true[0].name]),
+                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                         index   = y_true[1].index, 
+                                                         columns = [y_true[1].name])])
                         R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
                                                                     y_true    = y_true,
@@ -874,21 +883,25 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                     ax        = None)
                         print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
                         print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + R2_SCORE_TRAIN + R2_SCORE_TEST
+                        local_d[values] = local_d.get(values, 0) + R2_SCORE_TRAIN + R2_SCORE_TEST
                         print()                    
-                    print(f"🌟 Best R2 for {key} = {max(d, key=d.get)} (Total R2 = {d[max(d, key=d.get)]})")
+                    print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
                     return
                 
-                d = dict({})
-                for values in params[key]:
-                    temp_model = model.set_params(**{key: values})
-                    temp_model = temp_model.fit(x_fit[0],y_true[0])
-                    y_fit      = list([pd.DataFrame(data    = temp_model.predict(x_fit[0]), 
-                                                index   = y_true[0].index, 
-                                                columns = [y_true[0].name]),
-                                       pd.DataFrame(data    = temp_model.predict(x_fit[1]), 
-                                                    index   = y_true[1].index, 
-                                                    columns = [y_true[1].name])])
+                local_total = len(params[key])
+                for j, values in enumerate(params[key], 1):
+                    print(f"Turn: {j}/{local_total}")
+                    local_model = deepcopy(model)
+                    local_model = local_model.set_params(**{key: values})
+                    print(local_model)
+                    local_model = local_model.fit(x_fit[0],y_true[0])
+                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                     index   = y_true[0].index, 
+                                                     columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                     index   = y_true[1].index, 
+                                                     columns = [y_true[1].name])])
+                    param_key   = f"{key}_{values}"
                     # Option 2
                     if evaluate_metrics.get("MAE") is not None:
                         MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
@@ -900,7 +913,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                        ax        = None)
                         # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
                         print()
 
                     # Option 3
@@ -914,7 +930,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                        ax        = None)
                         # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
                         print()
 
                     # Option 4
@@ -928,7 +947,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                           ax        = None)
                         # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
                         print()
 
                     # Option 5
@@ -942,9 +964,22 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                           ax        = None)
                         # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
                         print()
-                print(f"🌟 Best MAE_MSE_MSLE_MAPE for {key} = {min(d, key=d.get)} (Total MAE_MSE_MSLE_MAPE = {d[min(d, key=d.get)]})")
+            best_param_key = min(global_d, key=global_d.get)
+            if global_d[best_param_key] < global_best:
+                print(global_d)
+                print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            else:
+                print(global_d)
+                print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
 
                     # # Option 6
                     # if evaluate_metrics.get("R2") is not None:
@@ -965,19 +1000,24 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                 My_MSE_SCORE,
                                                 My_MSLE_SCORE,
                                                 My_MAPE_SCORE)
-            for key in params.keys():
+            global_d     = dict({})
+            global_total = len(params)
+            global_best  = 0
+            for i, key in enumerate(params.keys(), 1):
+                print(f"Lap: {i}/{global_total}")
                 # Option 1
                 if evaluate_metrics.get("R2") is not None:
-                    d = dict({})
+                    local_d = dict({})
                     for values in params[key]:
-                        temp_model = model.set_params(**{key: values})
-                        temp_model = temp_model.fit(x_fit[0],y_true[0])
-                        y_fit      = list([pd.DataFrame(data    = temp_model.predict(x_fit[0]), 
-                                                    index   = y_true[0].index, 
-                                                    columns = [y_true[0].name]),
-                                           pd.DataFrame(data    = temp_model.predict(x_fit[1]), 
-                                                       index   = y_true[1].index, 
-                                                       columns = [y_true[1].name])])
+                        local_model = deepcopy(model)
+                        local_model = local_model.set_params(**{key: values})
+                        local_model = local_model.fit(x_fit[0],y_true[0])
+                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                         index   = y_true[0].index, 
+                                                         columns = [y_true[0].name]),
+                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                        index   = y_true[1].index, 
+                                                        columns = [y_true[1].name])])
                         R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
                                                                     y_true    = y_true,
@@ -987,21 +1027,25 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                     ax        = list([axes[0,0],axes[0,1]]))
                         print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
                         print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                        d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
+                        local_d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
                         print()                    
-                    print(f"🌟 Best R2 for {key} = {max(d, key=d.get)} (Total R2 = {d[max(d, key=d.get)]})")
+                    print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
                     return                       
-
-                d = dict({})
-                for values in params[key]:
-                    temp_model = model.set_params(**{key: values})
-                    temp_model = temp_model.fit(x_fit[0],y_true[0])
-                    y_fit      = list([pd.DataFrame(data    = temp_model.predict(x_fit[0]), 
-                                                    index   = y_true[0].index, 
-                                                    columns = [y_true[0].name]),
-                                       pd.DataFrame(data    = temp_model.predict(x_fit[1]), 
-                                                    index   = y_true[1].index, 
-                                                    columns = [y_true[1].name])])
+                
+                local_total = len(params[key])
+                for j, values in enumerate(params[key], 1):
+                    print(f"Turn: {j}/{local_total}")
+                    local_model = deepcopy(model)
+                    local_model = local_model.set_params(**{key: values})
+                    print(local_model)
+                    local_model = local_model.fit(x_fit[0],y_true[0])
+                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                     index   = y_true[0].index, 
+                                                     columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                     index   = y_true[1].index, 
+                                                     columns = [y_true[1].name])])
+                    param_key   = f"{key}_{values}"
                     # Option 2
                     if evaluate_metrics.get("MAE") is not None:
                         MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
@@ -1013,7 +1057,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                         ax        = list([axes[1,0],axes[1,1]]))
                         # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
                         print()
 
                     # Option 3
@@ -1027,7 +1074,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                         ax        = list([axes[2,0],axes[2,1]]))
                         # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
                         print()
 
                     # Option 4
@@ -1041,7 +1091,10 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                             ax        = list([axes[3,0],axes[3,1]]))
                         # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
                         print()
 
                     # Option 5
@@ -1055,9 +1108,22 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                                             ax        = list([axes[4,0],axes[4,1]]))
                         # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                         # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                        d[values] = d.get(values, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
                         print()
-                print(f"🌟 Best MAE_MSE_MSLE_MAPE for {key} = {min(d, key=d.get)} (Total MAE_MSE_MSLE_MAPE = {d[min(d, key=d.get)]})")
+            best_param_key = min(global_d, key=global_d.get)
+            if global_d[best_param_key] < global_best:
+                print(global_d)
+                print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            else:
+                print(global_d)
+                print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
 
                 # # Option 6
                 # if evaluate_metrics.get("R2") is not None:
