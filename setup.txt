@@ -15,3 +15,7 @@
 
 ✅ Cách xóa toàn bộ các package pip hiện có (không cần dựa vào requirements.txt):
 pip freeze > to_remove.txt && pip uninstall -y -r to_remove.txt && del to_remove.txt
+
+conda install graphviz # 2.50.0
+conda list graphviz
+dot -V
