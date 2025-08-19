@@ -51,7 +51,6 @@ def My_R2_SCORE(y_pred, y_true,
                 display   = False, 
                 step_size = 24,
                 freq      = None,
-                output    = "std",
                 ax        = None):
     y_train_true = y_true[0]
     y_test_true  = y_true[1]
@@ -143,17 +142,14 @@ def My_R2_SCORE(y_pred, y_true,
         ax[1].tick_params(axis='x', rotation=45)
         ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
         ax[1].legend()
-    if output == "std":
-        return train_scores[-1], test_scores[-1]
-    elif output == "list":
-        return train_scores[-1], test_scores[-1]
+    
+    return train_scores[-1], test_scores[-1]
 
 def My_MAE_SCORE(y_pred, y_true,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
                  freq      = None,
-                 output    = "std",
                  ax        = None):
 
     y_train_true = y_true[0]
@@ -255,7 +251,6 @@ def My_MSE_SCORE(y_pred, y_true,
                  display   = False, 
                  step_size = 24,
                  freq      = None,
-                 output    = "std",
                  ax        = None):
 
     y_train_true = y_true[0]
@@ -356,7 +351,6 @@ def My_MSLE_SCORE(y_pred, y_true,
                   display   = False, 
                   step_size = 24,
                   freq      = None,
-                  output    = "std",
                   ax        = None):
 
     y_train_true = y_true[0]
@@ -457,7 +451,6 @@ def My_MAPE_SCORE(y_pred, y_true,
                   display   = False, 
                   step_size = 24,
                   freq      = None,
-                  output    = "std",
                   ax        = None):
     y_train_true = y_true[0]
     y_test_true  = y_true[1]

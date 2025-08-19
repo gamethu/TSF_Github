@@ -660,11 +660,16 @@ def handle_feature_outliers_over_time(data, data_cols,
                                     start_time        = None,
                                     end_time          = None,
                                     freq              = None,
-                                    z_thresh          = 3,
-                                    modified_z_thresh = 3.5, 
+                                    z_thresh          = 3,    # Z_score
+                                    modified_z_thresh = 3.5,  # Z_score modified
+                                    k                 = 1.5,  # IQR
+                                    p_low             = 0.01, # Percentile
+                                    p_high            = 0.99, # Percentile
                                     models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
+                                    metrics           = list(["z_score"]),
                                     factor            = 1.5,
-                                    window_size       = 10,
+                                    step_size         = 10,
+                                    threshold         = 0.10,
                                     dendrogram        = False):
     import seaborn as sns
     import pandas as pd
@@ -708,29 +713,53 @@ def handle_feature_outliers_over_time(data, data_cols,
                 fig, axes = plt.subplots(2, 2, figsize=(20, 10))
                 
                 from models.anomaly_models import (MyZ_Score,
-                                                   MyZ_Score_modified)
+                                                   MyZ_Score_modified,
+                                                   MyIQR,
+                                                   MyPercentile)
                 outlier_idx = list(df_filtered.index)                
-                for row, sub_method in enumerate(["z_score", "z_score modified"]):
-                    if sub_method == "z_score":
-                        Z_outlier = MyZ_Score(data      = df_filtered,
-                                              data_cols = feature,
-                                              display   = False,
-                                              z_thresh  = z_thresh,
-                                              ax        = list([axes[0,0], axes[0,1]]))
-                        print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
-                        # if len(Z_outlier) > 0:
+                if "z_score" in metrics:
+                    Z_outlier = MyZ_Score(data      = df_filtered,
+                                          data_cols = feature,
+                                          display   = False,
+                                          z_thresh  = z_thresh,
+                                          ax        = None)
+                    print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(Z_outlier) > 0:
                         outlier_idx = list(set(outlier_idx).intersection(set(Z_outlier)))
 
-                    elif sub_method == "z_score modified":
-                        ZM_outlier = MyZ_Score_modified(data              = df_filtered,
-                                                        data_cols         = feature,
-                                                        display           = False,
-                                                        modified_z_thresh = modified_z_thresh,
-                                                        ax                = list([axes[1,0], axes[1,1]]))
-                        print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
-                        # if len(ZM_outlier) > 0:
+                if "z_score modified" in metrics:
+                    ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+                                                    data_cols         = feature,
+                                                    display           = False,
+                                                    modified_z_thresh = modified_z_thresh,
+                                                    ax                = None)
+                    print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(ZM_outlier) > 0:
                         outlier_idx = list(set(outlier_idx).intersection(set(ZM_outlier)))
-                        
+                
+                # Option 3
+                if "iqr" in metrics:
+                    IQR_outlier = MyIQR(data      = df_filtered,
+                                        data_cols = feature,
+                                        display   = False,
+                                        k         = k,
+                                        ax        = None)
+                    print(f"🔹 {feature} (IQR, k={k}): {len(IQR_outlier)} outliers ~ {len(IQR_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(IQR_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(IQR_outlier)))
+
+                # Option 4
+                if "percentile" in metrics:
+                    P_outlier = MyPercentile(data      = df_filtered,
+                                             data_cols = feature,
+                                             display   = False,
+                                             p_low     = p_low,
+                                             p_high    = p_high,
+                                             ax        = None)
+                    print(f"🔹 {feature} (Percentile, p_low, p_high={p_low, p_high}): {len(P_outlier)} outliers ~ {len(P_outlier)/len(df_filtered[feature]):.2%}")
+                    if len(P_outlier) > 0:
+                        outlier_idx = list(set(outlier_idx).intersection(set(P_outlier)))
+                       
                 print(f"~> Outlier detected: {len(outlier_idx)} outliers ~ {len(outlier_idx)/len(df_filtered[feature]):.2%}")
                 if display is True:
                     # Vẽ plot trên dữ liệu gốc
@@ -760,9 +789,12 @@ def handle_feature_outliers_over_time(data, data_cols,
                     axes[1,0].set_xlabel(name)
                     axes[1,0].set_ylabel('Count')
                     axes[1,0].grid(True)
-                    
+                
+                outlier_ratio = round((len(outlier_idx)/len(df_filtered.index)),2)
                 # Handle
-                if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
+                if (len(outlier_idx) > 0 
+                    and len(outlier_idx)!=len(df_filtered.index)
+                    and outlier_ratio <= threshold):
                     # Gán NaN vào các outlier
                     df_filtered.loc[outlier_idx, feature] = np.nan
                     

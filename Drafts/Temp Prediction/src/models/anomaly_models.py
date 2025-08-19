@@ -257,17 +257,17 @@ def MyZ_Score(data, data_cols, ax, z_thresh = 3, display = False):
     if display is True:
         # Vẽ lineplot
         ax[0].plot(data.index, data[data_cols],
-                                color     = 'dimgray', 
-                                linestyle = '-', 
-                                alpha     = 0.7, 
-                                label     = f'{data_cols} (Full Series)')
+                   color     = 'dimgray', 
+                   linestyle = '-', 
+                   alpha     = 0.7, 
+                   label     = f'{data_cols} (Full Series)')
         if not outliers.empty:
             ax[0].scatter(outliers.index, outliers,
-                                    color  = 'red', 
-                                    label  = 'Outliers', 
-                                    marker = 'o')
+                          color  = 'red', 
+                          label  = 'Outliers', 
+                          marker = 'o')
 
-        ax[0].set_title(f'Z_Score_Modified Outlier Detection - {data_cols}')
+        ax[0].set_title(f'Z_Score Outlier Detection - {data_cols}')
         ax[0].set_xlabel('Time')
         ax[0].set_ylabel('Value')
         ax[0].grid(True)
@@ -283,16 +283,16 @@ def MyZ_Score(data, data_cols, ax, z_thresh = 3, display = False):
             ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
             ax[1].set_xticks(outlier_counts['Year'])
             ax[1].set_ylabel('Number of Outliers')
-            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+            ax[1].set_title(f'Z_Score Outlier Count per Year')
             ax[1].set_xlabel('Year')
             ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
         else:
             ax[1].text(0.5, 0.5, 'No outliers found.',
-                                horizontalalignment = 'center',
-                                verticalalignment   = 'center',
-                                transform           = ax[1].transAxes,
-                                fontsize            = 14)
-            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+                       horizontalalignment = 'center',
+                       verticalalignment   = 'center',
+                       transform           = ax[1].transAxes,
+                       fontsize            = 14)
+            ax[1].set_title(f'Z_Score Outlier Count per Year')
             ax[1].set_xticks([]); ax[1].set_yticks([])
 
         ax[1].tick_params(axis='x', rotation=45)
@@ -316,17 +316,17 @@ def MyZ_Score_modified(data, data_cols, ax, modified_z_thresh = 3, display = Fal
     if display is True:
         # Vẽ lineplot
         ax[0].plot(data.index, data[data_cols],
-                                color     = 'dimgray', 
-                                linestyle = '-', 
-                                alpha     = 0.7, 
-                                label     = f'{data_cols} (Full Series)')
+                   color     = 'dimgray', 
+                   linestyle = '-', 
+                   alpha     = 0.7, 
+                   label     = f'{data_cols} (Full Series)')
         if not outliers.empty:
             ax[0].scatter(outliers.index, outliers,
-                                    color  = 'red', 
-                                    label  = 'Outliers', 
-                                    marker = 'o')
+                          color  = 'red', 
+                          label  = 'Outliers', 
+                          marker = 'o')
     
-        ax[0].set_title(f'Z_Score Outlier Detection - {data_cols}')
+        ax[0].set_title(f'Z_Score_Modified Outlier Detection - {data_cols}')
         ax[0].set_xlabel('Time')
         ax[0].set_ylabel('Value')
         ax[0].grid(True)
@@ -334,26 +334,135 @@ def MyZ_Score_modified(data, data_cols, ax, modified_z_thresh = 3, display = Fal
     
         # Barplot số outlier theo năm
         if not outliers.empty:
-            outlier_counts = outliers.resample('Y').count().astype(int)
-            outlier_counts = outlier_counts.reset_index()
+            outlier_counts         = outliers.resample('Y').count().astype(int)
+            outlier_counts         = outlier_counts.reset_index()
             outlier_counts['Year'] = outlier_counts['time'].dt.year
     
             colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
             ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
             ax[1].set_xticks(outlier_counts['Year'])
             ax[1].set_ylabel('Number of Outliers')
-            ax[1].set_title(f'Z_Score Outlier Count per Year')
+            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+            ax[1].set_xlabel('Year')
+            ax[1].grid(True, 
+                       which     = 'both', 
+                       linestyle = '--', 
+                       linewidth = 0.5)
+        else:
+            ax[1].text(0.5, 0.5, 'No outliers found.',
+                       horizontalalignment = 'center',
+                       verticalalignment   = 'center',
+                       transform           = ax[1].transAxes,
+                       fontsize            = 14)
+            ax[1].set_title(f'Z_Score_Modified Outlier Count per Year')
+            ax[1].set_xticks([]); ax[1].set_yticks([])
+    
+        ax[1].tick_params(axis='x', rotation=45)
+
+    return outliers.index
+def MyIQR(data, data_cols, ax, k = 1.5, display = False):
+    # Scale dữ liệu
+    Q1       = data[data_cols].quantile(0.25)
+    Q3       = data[data_cols].quantile(0.75)
+    IQR      = Q3 - Q1
+    lower    = Q1 - k*IQR
+    higher   = Q3 + k*IQR
+    outliers = data[(data[data_cols] < lower) | (data[data_cols] > higher)][data_cols]
+
+    if display is True:
+        # Vẽ lineplot
+        ax[0].plot(data.index, data[data_cols],
+                   color     = 'dimgray', 
+                   linestyle = '-', 
+                   alpha     = 0.7, 
+                   label     = f'{data_cols} (Full Series)')
+        if not outliers.empty:
+            ax[0].scatter(outliers.index, outliers,
+                          color  = 'red', 
+                          label  = 'Outliers', 
+                          marker = 'o')
+
+        ax[0].set_title(f'IQR Outlier Detection - {data_cols}')
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel('Value')
+        ax[0].grid(True)
+        ax[0].legend()
+
+        # Barplot số outlier theo năm
+        if not outliers.empty:
+            outlier_counts = outliers.resample('Y').count().astype(int)
+            outlier_counts = outlier_counts.reset_index()
+            outlier_counts['Year'] = outlier_counts['time'].dt.year
+
+            colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
+            ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
+            ax[1].set_xticks(outlier_counts['Year'])
+            ax[1].set_ylabel('Number of Outliers')
+            ax[1].set_title(f'IQR Outlier Count per Year')
             ax[1].set_xlabel('Year')
             ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
         else:
             ax[1].text(0.5, 0.5, 'No outliers found.',
-                                horizontalalignment = 'center',
-                                verticalalignment   = 'center',
-                                transform           = ax[1].transAxes,
-                                fontsize            = 14)
-            ax[1].set_title(f'Z_Score Outlier Count per Year')
+                       horizontalalignment = 'center',
+                       verticalalignment   = 'center',
+                       transform           = ax[1].transAxes,
+                       fontsize            = 14)
+            ax[1].set_title(f'IQR Outlier Count per Year')
             ax[1].set_xticks([]); ax[1].set_yticks([])
-    
+
+        ax[1].tick_params(axis='x', rotation=45)
+
+    return outliers.index
+def MyPercentile(data, data_cols, ax, 
+                 p_low   = 0.01, 
+                 p_high  = 0.99, 
+                 display = False):
+    # Scale dữ liệu
+    lower       = data[data_cols].quantile(p_low)
+    higher       = data[data_cols].quantile(p_high)
+    outliers = data[(data[data_cols] < lower) | (data[data_cols] > higher)][data_cols]
+
+    if display is True:
+        # Vẽ lineplot
+        ax[0].plot(data.index, data[data_cols],
+                   color     = 'dimgray', 
+                   linestyle = '-', 
+                   alpha     = 0.7, 
+                   label     = f'{data_cols} (Full Series)')
+        if not outliers.empty:
+            ax[0].scatter(outliers.index, outliers,
+                          color  = 'red', 
+                          label  = 'Outliers', 
+                          marker = 'o')
+
+        ax[0].set_title(f'Percentile Outlier Detection - {data_cols}')
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel('Value')
+        ax[0].grid(True)
+        ax[0].legend()
+
+        # Barplot số outlier theo năm
+        if not outliers.empty:
+            outlier_counts = outliers.resample('Y').count().astype(int)
+            outlier_counts = outlier_counts.reset_index()
+            outlier_counts['Year'] = outlier_counts['time'].dt.year
+
+            colors = plt.cm.viridis(np.linspace(0, 1, len(outlier_counts)))
+            ax[1].bar(outlier_counts['Year'], outlier_counts[data_cols], color=colors)
+            ax[1].set_xticks(outlier_counts['Year'])
+            ax[1].set_ylabel('Number of Outliers')
+            ax[1].set_title(f'Percentile Outlier Count per Year')
+            ax[1].set_xlabel('Year')
+            ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
+        else:
+            ax[1].text(0.5, 0.5, 'No outliers found.',
+                       horizontalalignment = 'center',
+                       verticalalignment   = 'center',
+                       transform           = ax[1].transAxes,
+                       fontsize            = 14)
+            ax[1].set_title(f'Percentile Outlier Count per Year')
+            ax[1].set_xticks([]); ax[1].set_yticks([])
+
         ax[1].tick_params(axis='x', rotation=45)
 
     return outliers.index

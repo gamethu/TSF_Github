@@ -19,3 +19,6 @@ pip freeze > to_remove.txt && pip uninstall -y -r to_remove.txt && del to_remove
 conda install graphviz # 2.50.0
 conda list graphviz
 dot -V
+
+conda remove
+conda clean --all

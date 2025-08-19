@@ -177,11 +177,15 @@ def plot_feature_outliers_over_time(data, data_cols,
                                     start_time        = None,
                                     end_time          = None,
                                     freq              = None,
-                                    z_thresh          = 3,
-                                    modified_z_thresh = 3.5, 
+                                    z_thresh          = 3,    # Z_score
+                                    modified_z_thresh = 3.5,  # Z_score modified
+                                    k                 = 1.5,  # IQR
+                                    p_low             = 0.01, # Percentile
+                                    p_high            = 0.99, # Percentile
                                     models            = dict({"LocalOutlierFactor" : LocalOutlierFactor()}),
+                                    metrics           = list(["z_score"]),
                                     factor            = 1.5,
-                                    step_size       = 10,
+                                    step_size         = 10,
                                     dendrogram        = False):
     import seaborn as sns
     import pandas as pd
@@ -219,27 +223,49 @@ def plot_feature_outliers_over_time(data, data_cols,
 
         for feature in data_cols:
             if method == "statistic":
-                fig, axes = plt.subplots(2, 2, figsize=(20, 10))
+                fig, axes = plt.subplots(4, 2, figsize=(20, 20))
                 
                 from models.anomaly_models import (MyZ_Score,
-                                                   MyZ_Score_modified)
+                                                   MyZ_Score_modified,
+                                                   MyIQR,
+                                                   MyPercentile)
                 
-                for row, sub_method in enumerate(["z_score", "z_score modified"]):
-                    if sub_method == "z_score":
-                        Z_outlier = MyZ_Score(data      = df_filtered,
+                # Option 1
+                if "z_score" in metrics:
+                    Z_outlier = MyZ_Score(data      = df_filtered,
+                                            data_cols = feature,
+                                            display   = display,
+                                            z_thresh  = z_thresh,
+                                            ax        = list([axes[0,0], axes[0,1]]))
+                    print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
+
+                # Option 2
+                if "z_score modified" in metrics:
+                    ZM_outlier = MyZ_Score_modified(data              = df_filtered,
+                                                    data_cols         = feature,
+                                                    display           = display,
+                                                    modified_z_thresh = modified_z_thresh,
+                                                    ax                = list([axes[1,0], axes[1,1]]))
+                    print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+
+                # Option 3
+                if "iqr" in metrics:
+                    IQR_outlier = MyIQR(data      = df_filtered,
+                                        data_cols = feature,
+                                        display   = display,
+                                        k         = k,
+                                        ax        = list([axes[2,0], axes[2,1]]))
+                    print(f"🔹 {feature} (IQR, k={k}): {len(IQR_outlier)} outliers ~ {len(IQR_outlier)/len(df_filtered[feature]):.2%}")
+
+                # Option 4
+                if "percentile" in metrics:
+                    Pe_outlier = MyPercentile(data      = df_filtered,
                                               data_cols = feature,
                                               display   = display,
-                                              z_thresh  = z_thresh,
-                                              ax        = list([axes[0,0], axes[0,1]]))
-                        print(f"🔹 {feature} (Z_Score, z_thresh={z_thresh}): {len(Z_outlier)} outliers ~ {len(Z_outlier)/len(df_filtered[feature]):.2%}")
-
-                    elif sub_method == "z_score modified":
-                        ZM_outlier = MyZ_Score_modified(data              = df_filtered,
-                                                        data_cols         = feature,
-                                                        display           = display,
-                                                        modified_z_thresh = modified_z_thresh,
-                                                        ax                  = list([axes[1,0], axes[1,1]]))
-                        print(f"🔹 {feature} (Z_Score_Modified, modified_z_thresh={modified_z_thresh}): {len(ZM_outlier)} outliers ~ {len(ZM_outlier)/len(df_filtered[feature]):.2%}")
+                                              p_low     = p_low,
+                                              p_high    = p_high,
+                                              ax        = list([axes[3,0], axes[3,1]]))
+                    print(f"🔹 {feature} (Percentile, p_low, p_high={p_low, p_high}): {len(Pe_outlier)} outliers ~ {len(Pe_outlier)/len(df_filtered[feature]):.2%}")
             elif method == "machine_learning":        
                 fig, axes = plt.subplots(4, 2, figsize=(20, 20))
                 
@@ -287,7 +313,7 @@ def plot_feature_outliers_over_time(data, data_cols,
                                                             data_cols   = feature,
                                                             model       = MAC_model,
                                                             display     = display,
-                                                            step_size = step_size,
+                                                            step_size   = step_size,
                                                             dendrogram  = dendrogram,
                                                             ax          = list([axes[2,0],axes[2,1]]))
                     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
@@ -328,32 +354,36 @@ def plot_feature_outliers_over_time(data, data_cols,
 
     
 # Mutual infomation
-def make_mi_scores_classification(X_data, y_data):
+def make_mi_scores(features, target, random_state, type):
     import pandas as pd
     from sklearn.feature_selection import mutual_info_classif
-    
-    X_data = X_data.copy()
-    for colname in X_data.select_dtypes(["object", "category"]):
-        X_data[colname], _ = X_data[colname].factorize()
-
-    # All discrete features should now have integer dtypes
-    discrete_features = [pd.api.types.is_integer_dtype(t) for t in X_data.dtypes]
-    mi_scores = mutual_info_classif(X_data, y_data, discrete_features=discrete_features, random_state=0)
-    mi_scores = pd.Series(mi_scores, name="MI Scores", index=X_data.columns)
-    mi_scores = mi_scores.sort_values(ascending=False)
-    return mi_scores
-def make_mi_scores_regression(X_data, y_data):
-    import pandas as pd
     from sklearn.feature_selection import mutual_info_regression
     
-    X_data = X_data.copy()
-    for colname in X_data.select_dtypes(["object", "category"]):
-        X_data[colname], _ = X_data[colname].factorize()
+    features = features.copy()
+    for colname in features.select_dtypes(["object", "category"]):
+        features[colname], _ = features[colname].factorize()
 
+    discrete_features = []
+    for col in features.columns:
+        if pd.api.types.is_integer_dtype(features[col]):
+            # ngưỡng 20 unique coi là discrete, bạn có thể chỉnh
+            discrete_features.append(features[col].nunique() < 20)
+        else:
+            discrete_features.append(False)
+            
+    if type =="classification":
     # All discrete features should now have integer dtypes
-    discrete_features = [pd.api.types.is_integer_dtype(t) for t in X_data.dtypes]
-    mi_scores = mutual_info_regression(X_data, y_data, discrete_features=discrete_features, random_state=0)
-    mi_scores = pd.Series(mi_scores, name="MI Scores", index=X_data.columns)
+        mi_scores = mutual_info_classif(features, target, 
+                                        discrete_features = discrete_features, 
+                                        random_state      = random_state)
+    elif type =="regression":
+        mi_scores = mutual_info_regression(features, target, 
+                                           discrete_features = discrete_features, 
+                                           random_state      = random_state)
+    else:
+        print("Type not support")
+        return
+    mi_scores = pd.Series(mi_scores, name="MI Scores", index=features.columns)
     mi_scores = mi_scores.sort_values(ascending=False)
     return mi_scores
 def plot_mi_scores(scores):
@@ -362,8 +392,8 @@ def plot_mi_scores(scores):
     
     plt.grid(True, axis='x')
     scores = scores.sort_values(ascending=True)
-    width = np.arange(len(scores))
-    ticks = list(scores.index)
+    width  = np.arange(len(scores))
+    ticks  = list(scores.index)
     plt.barh(width, scores)
     plt.yticks(width, ticks)
     plt.title("Mutual Information Scores")
@@ -575,18 +605,18 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 # Custom evaluation function to replace plots.evaluate_model
 def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, y_pred,
                                   method           = "short",
-                                  evaluate_metrics = dict({
-                                                      "R2"   : "r2_score",   
-                                                    #   "MAE"  : "mean_absolute_error",
-                                                    #   "MSE"  : "mean_squared_error",
-                                                    #   "MSLE" : "mean_squared_log_error",
-                                                    #   "MAPE" : "mean_absolute_percentage_error"
-                                                      }),
-                                  display          = False,
-                                  start_time       = None,
-                                  end_time         = None,
-                                  step_size        = 24,
-                                  freq             = None):
+                                  metrics    = list([
+                                                     "R2",   
+                                                    #  "MAE",
+                                                    #  "MSE",
+                                                    #  "MSLE",
+                                                    #  "MAPE"
+                                                     ]),
+                                  display    = False,
+                                  start_time = None,
+                                  end_time   = None,
+                                  step_size  = 24,
+                                  freq       = None):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -627,7 +657,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                 My_MSLE_SCORE,
                                                 My_MAPE_SCORE)
             # Option 1
-            if evaluate_metrics.get("R2") is not None:
+            if "R2" in metrics:
                 R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                             y_pred    = y_pred,
                                                             y_true    = y_true,
@@ -640,7 +670,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()                    
             
             # Option 2
-            if evaluate_metrics.get("MAE") is not None:
+            if "MAE" in metrics:
                 MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
@@ -653,7 +683,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 3
-            if evaluate_metrics.get("MSE") is not None:
+            if "MSE" in metrics:
                 MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
@@ -666,7 +696,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 4
-            if evaluate_metrics.get("MSLE") is not None:
+            if "MSLE" in metrics:
                 MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
@@ -679,7 +709,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 5
-            if evaluate_metrics.get("MAPE") is not None:
+            if "MAPE" in metrics:
                 MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
@@ -692,7 +722,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # # Option 6
-            # if evaluate_metrics.get("R2") is not None:
+            # if metrics.get("R2") is not None:
             #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
             #                                                 y_pred    = y_pred,
             #                                                 y_true    = y_true,
@@ -711,7 +741,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                                                 My_MSLE_SCORE,
                                                 My_MAPE_SCORE)
             # Option 1
-            if evaluate_metrics.get("R2") is not None:
+            if "R2" in metrics:
                 R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                             y_pred    = y_pred,
                                                             y_true    = y_true,
@@ -724,7 +754,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()                    
             
             # Option 2
-            if evaluate_metrics.get("MAE") is not None:
+            if "MAE" in metrics:
                 MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
@@ -737,7 +767,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 3
-            if evaluate_metrics.get("MSE") is not None:
+            if "MSE" in metrics:
                 MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                y_pred    = y_pred,
                                                                y_true    = y_true,
@@ -750,7 +780,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 4
-            if evaluate_metrics.get("MSLE") is not None:
+            if "MSLE" in metrics:
                 MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
@@ -763,7 +793,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # Option 5
-            if evaluate_metrics.get("MAPE") is not None:
+            if "MAPE" in metrics:
                 MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                   y_pred    = y_pred,
                                                                   y_true    = y_true,
@@ -776,7 +806,7 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
                 print()
               
             # # Option 6
-            # if evaluate_metrics.get("R2") is not None:
+            # if metrics.get("R2") is not None:
             #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
             #                                                 y_pred    = y_pred,
             #                                                 y_true    = y_true,
@@ -800,19 +830,19 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
 def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, y_true, model, params,
-                                  method           = "short",
-                                  evaluate_metrics = dict({
-                                                      "R2"   : "r2_score",   
-                                                    #   "MAE"  : "mean_absolute_error",
-                                                    #   "MSE"  : "mean_squared_error",
-                                                    #   "MSLE" : "mean_squared_log_error",
-                                                    #   "MAPE" : "mean_absolute_percentage_error"
-                                                      }),
-                                  display          = False,
-                                  start_time       = None,
-                                  end_time         = None,
-                                  step_size        = 24,
-                                  freq             = None):
+                                  method     = "short",
+                                  metrics    = list([
+                                                    #  "R2",   
+                                                     "MAE",
+                                                    #  "MSE",
+                                                    #  "MSLE",
+                                                    #  "MAPE"
+                                                     ]),
+                                  display    = False,
+                                  start_time = None,
+                                  end_time   = None,
+                                  step_size  = 24,
+                                  freq       = None):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -862,7 +892,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
             for i, key in enumerate(params.keys(), 1):
                 print(f"Lap: {i}/{global_total}")
                 # Option 1
-                if evaluate_metrics.get("R2") is not None:
+                if "R2" in metrics:
                     local_d = dict({})
                     for values in params[key]:
                         local_model = deepcopy(model)
@@ -894,6 +924,9 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                     local_model = deepcopy(model)
                     local_model = local_model.set_params(**{key: values})
                     print(local_model)
+                    if not ((i==1 and j==1) or (j!=1)):
+                        print("Skip")
+                        continue
                     local_model = local_model.fit(x_fit[0],y_true[0])
                     y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
                                                      index   = y_true[0].index, 
@@ -903,7 +936,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                      columns = [y_true[1].name])])
                     param_key   = f"{key}_{values}"
                     # Option 2
-                    if evaluate_metrics.get("MAE") is not None:
+                    if "MAE" in metrics:
                         MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                        y_pred    = y_fit,
                                                                        y_true    = y_true,
@@ -920,7 +953,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 3
-                    if evaluate_metrics.get("MSE") is not None:
+                    if "MSE" in metrics:
                         MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                        y_pred    = y_fit,
                                                                        y_true    = y_true,
@@ -937,7 +970,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 4
-                    if evaluate_metrics.get("MSLE") is not None:
+                    if "MSLE" in metrics:
                         MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                           y_pred    = y_fit,
                                                                           y_true    = y_true,
@@ -954,7 +987,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 5
-                    if evaluate_metrics.get("MAPE") is not None:
+                    if "MAPE" in metrics:
                         MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                           y_pred    = y_fit,
                                                                           y_true    = y_true,
@@ -982,7 +1015,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
 
                     # # Option 6
-                    # if evaluate_metrics.get("R2") is not None:
+                    # if metrics.get("R2") is not None:
                     #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                     #                                                 y_pred    = y_fit,
                     #                                                 y_true    = y_true,
@@ -1006,7 +1039,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
             for i, key in enumerate(params.keys(), 1):
                 print(f"Lap: {i}/{global_total}")
                 # Option 1
-                if evaluate_metrics.get("R2") is not None:
+                if "R2" in metrics:
                     local_d = dict({})
                     for values in params[key]:
                         local_model = deepcopy(model)
@@ -1047,7 +1080,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                                      columns = [y_true[1].name])])
                     param_key   = f"{key}_{values}"
                     # Option 2
-                    if evaluate_metrics.get("MAE") is not None:
+                    if "MAE" in metrics:
                         MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
                                                                         y_pred    = y_fit,
                                                                         y_true    = y_true,
@@ -1064,7 +1097,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 3
-                    if evaluate_metrics.get("MSE") is not None:
+                    if "MSE" in metrics:
                         MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
                                                                         y_pred    = y_fit,
                                                                         y_true    = y_true,
@@ -1081,7 +1114,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 4
-                    if evaluate_metrics.get("MSLE") is not None:
+                    if "MSLE" in metrics:
                         MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
                                                                             y_pred    = y_fit,
                                                                             y_true    = y_true,
@@ -1098,7 +1131,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                         print()
 
                     # Option 5
-                    if evaluate_metrics.get("MAPE") is not None:
+                    if "MAPE" in metrics:
                         MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
                                                                             y_pred    = y_fit,
                                                                             y_true    = y_true,
@@ -1126,7 +1159,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
 
                 # # Option 6
-                # if evaluate_metrics.get("R2") is not None:
+                # if metrics.get("R2") is not None:
                 #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                 #                                                 y_pred    = y_fit,
                 #                                                 y_true    = y_true,

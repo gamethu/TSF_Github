@@ -1,9 +1,17 @@
 ipykernel
+# numba
+
 numpy<2
+
 pandas
+# cudf-cu12 <~> compute capability 7.0+
+# polars
+
+scikit-learn
+# cuml-cu12
+
 matplotlib
 seaborn
-scikit-learn
 xgboost
 statsmodels
 tensorflow<2.11
@@ -19,6 +27,6 @@ scipy
 prophet
 hdbscan
 pydot==2.0.0
-graphviz # ~> exe
+graphviz # <~> OUTofDATE <~> use conda instead
 # conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 # conda install -c conda-forge graphviz=2.50.0

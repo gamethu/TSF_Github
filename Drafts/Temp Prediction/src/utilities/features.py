@@ -16,20 +16,20 @@ def utc_to_vietnam(df, column_name):
 
     return df
 
-def extract_time_features(df):
+def extract_time_features(df, column_name):
     import pandas as pd
     
     # Đảm bảo cột time là kiểu datetime timezone-aware
-    df['time'] = pd.to_datetime(df['time'])
+    df[column_name] = pd.to_datetime(df[column_name])
 
-    # Tạo cột ymd dạng 1/2/1990
-    # df['ymd'] = df['time'].dt.strftime('%-d/%-m/%Y')  # Unix-like
+    # Tạo cột ymd dạng 1/2/1990 ngay <~> 2 thang 1 namw 1990
+    # df['ymd'] = df[column_name].dt.strftime('%-m/%-d/%Y')  # Unix-like
 
     # Nếu trên Windows thì dùng:
-    df['ymd'] = df['time'].dt.strftime('%#d/%#m/%Y')
+    df['ymd'] = df[column_name].dt.strftime('%#m/%#d/%Y')
     
-    df['year']  = df['time'].dt.year
-    df['month'] = df['time'].dt.month
-    df['day']   = df['time'].dt.day
+    df['year']  = df[column_name].dt.year
+    df['month'] = df[column_name].dt.month
+    df['day']   = df[column_name].dt.day
 
     return df
