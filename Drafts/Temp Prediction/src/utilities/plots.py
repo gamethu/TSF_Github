@@ -1223,23 +1223,118 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
+def original(data,
+             data_cols = None,
+             display   = False,
+             period    = None,
+             ax        = None):
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    if display is True:
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(data[data_cols], 'gray', label='Original ' + model)
+            ax[i].plot(result.trend, 'red', label='Trend')
+            ax[i].legend()
+
+def trend(data,
+          data_cols = None,
+          display   = False,
+          period    = None,
+          ax        = None):
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    if display is True:
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(result.trend, 'blue', label='Trend')
+            ax[i].legend()
+        
+            
+def seasonality(data,
+                data_cols = None,
+                display   = False,
+                period    = None,
+                ax        = None):
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    if display is True:
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(result.seasonal, 'green', label='Seasonality')
+            ax[i].legend()
+def residuals(data,
+              data_cols = None,
+              display   = False,
+              period    = None,
+              ax        = None):
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    if display is True:
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(result.resid, 'red', label='Residuals')
+            ax[i].legend()
+
+def correlation_analysis(data,
+                         data_cols = None,
+                         display   = False,
+                         period    = None,
+                         ax        = None):
+    from statsmodels.graphics.tsaplots import plot_acf
+    from statsmodels.graphics.tsaplots import plot_pacf
+    if display is True:
+        # acf, pacf
+        plot_acf(data[data_cols], lags=period, ax=ax[0])
+        plot_pacf(data[data_cols], lags=period, ax=ax[1])
+def mutual_information(data,
+                       data_cols = None,
+                       display   = False,
+                       period    = None,
+                       ax        = None):
+    import sys
+    sys.path.append("../")  # đường dẫn đến thư mục chứa src
+
+    from src.utilities import(config, 
+                              dataset, 
+                              features, 
+                              plots)
+    
+    PROJ_SEED = config.getSeed()
+    mi_scores = make_mi_scores(features     = data, 
+                                    target       = data[data_cols],
+                                    type         = "regression",
+                                    random_state = PROJ_SEED)
+
+    print(mi_scores)
+    if display is True:
+        plot_mi_scores(mi_scores)
 
 def ts_analysis(data,
-                 data_cols = None,
-                 start_time = None, 
-                 end_time = None, 
-                 freq = None,
-                 period = 24):
+                data_cols = None,
+                method           = "short",
+                analysis    = list([
+                                    "original",
+                                    "trend",  
+                                    # "seasonal",
+                                    # "resid",
+                                    # "correlation",
+                                    # "mutual"
+                                    ]),
+                display    = False,
+                start_time = None, 
+                end_time = None, 
+                freq = None,
+                period = 24):
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    from statsmodels.tsa.stattools import adfuller
-    from statsmodels.tsa.stattools import kpss
-    from scipy.stats import ks_2samp
-    from scipy import stats
-    from statsmodels.graphics.tsaplots import plot_acf
-    from statsmodels.graphics.tsaplots import plot_pacf
+
+    import sys
+    import os
+    sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
     
     start_time = pd.to_datetime(start_time)
     end_time   = pd.to_datetime(end_time)
@@ -1251,65 +1346,110 @@ def ts_analysis(data,
     if freq:        
         # Chỉ giữ các cột số
         numeric_cols = df_filtered.select_dtypes(include='number').columns
-        df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate()
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
+
 
     for column in data_cols:    
-        fig, axes = plt.subplots(6, 2, figsize=(20, 20))
-        # trend, seasonal, resid
-        for i, model in enumerate(["additive", "multiplicative"]):
-            result = seasonal_decompose(df_filtered[column], model=model, period=period)
+        if method == "short":
+            # Option 1
+            if "original" in analysis:
+                original(data     = df_filtered,
+                         data_cols = column,
+                         display   = False,
+                         period    = period,
+                         ax        = None)
 
-            axes[0,i].set_title("Decomposition for " + model + " model - " + column)
-            axes[0,i].plot(df_filtered[column], 'k', label='Original ' + model)
-            axes[0,i].plot(result.trend, 'r', label='Trend')
-            axes[0,i].legend()
+            # Option 2
+            if "trend" in analysis:
+                trend(data    = df_filtered,
+                      data_cols = column,
+                      display   = False,
+                      period    = period,
+                      ax        = None)
+              
+            # Option 3
+            if "seasonal" in analysis:
+                seasonality(data      = df_filtered,
+                            data_cols = column,
+                            display   = False,
+                            period    = period,
+                            ax        = None)
+              
+            # Option 4
+            if "resid" in analysis:
+                residuals(data    = df_filtered,
+                        data_cols = column,
+                        display   = False,
+                        period    = period,
+                        ax        = None)
+              
+            # Option 5
+            if "correlation" in analysis:
+                correlation_analysis(data     = df_filtered,
+                                    data_cols = column,
+                                    display   = False,
+                                    period    = period,
+                                    ax        = None)
+              
+            # Option 6
+            if "mutual" in analysis:
+                mutual_information(data   = df_filtered,
+                                data_cols = column,
+                                display   = False,
+                                period    = period,
+                                ax        = None)
+        elif method == "full":        
+            fig, axes = plt.subplots(6, 2, figsize=(20, 20))
+            # Option 1
+            if "original" in analysis:
+                original(data     = df_filtered,
+                        data_cols = column,
+                        display   = display,
+                        period    = period,
+                        ax        = list([axes[0,0],axes[0,1]]))
 
-            axes[1,i].plot(result.trend, label='Trend')
-            axes[1,i].legend()
+            # Option 2
+            if "trend" in analysis:
+                trend(data    = df_filtered,
+                    data_cols = column,
+                    display   = display,
+                    period    = period,
+                    ax        = list([axes[1,0],axes[1,1]]))
+              
+            # Option 3
+            if "seasonal" in analysis:
+                seasonality(data      = df_filtered,
+                            data_cols = column,
+                            display   = display,
+                            period    = period,
+                            ax        = list([axes[2,0],axes[2,1]]))
+              
+            # Option 4
+            if "resid" in analysis:
+                residuals(data    = df_filtered,
+                        data_cols = column,
+                        display   = display,
+                        period    = period,
+                        ax        = list([axes[3,0],axes[3,1]]))
+              
+            # Option 5
+            if "correlation" in analysis:
+                correlation_analysis(data     = df_filtered,
+                                    data_cols = column,
+                                    display   = display,
+                                    period    = period,
+                                    ax        = list([axes[4,0],axes[4,1]]))
+              
+            # Option 6
+            if "mutual" in analysis:
+                mutual_information(data   = df_filtered,
+                                data_cols = column,
+                                display   = display,
+                                period    = period,
+                                ax        = list([axes[5,0],axes[5,1]]))
 
-            axes[2,i].plot(result.seasonal, 'g', label='Seasonality')
-            axes[2,i].legend()
 
-            axes[3,i].plot(result.resid, 'r', label='Residuals')
-            axes[3,i].legend()
+
         
-        #stationary
-        adf_p_value = adfuller(df_filtered[column], autolag="AIC")[1]      
-        kpss_p_value = kpss(df_filtered[column], regression="ct", nlags="auto")[1]
-        split = len(df_filtered[column]) // 2
-        series_first_half = df_filtered[:split]
-        series_second_half = df_filtered[split:]
-        stat, ks_p_value = ks_2samp(series_first_half, series_second_half)
-        if adf_p_value > 0.05 and kpss_p_value < 0.05 and ks_p_value > 0.05:
-            print(f"""Result - {column}: Non-Stationary (adf_p_value:  {adf_p_value}
-                                        kpss_p_value: {kpss_p_value}
-                                        ks_p_value: {ks_p_value}""")
-            
-            df_filtered[column] = df_filtered[column].diff()
-            df_filtered[column] = np.log(df_filtered[column])
-            df_filtered[column] = np.sqrt(df_filtered[column])
-            df_filtered[column], _ = stats.boxcox(df_filtered[column > 0])
-            trend = np.polyfit(np.arange(len(df_filtered[column])), df_filtered[column], 1)
-            trendline = np.polyval(trend, np.arange(len(df_filtered[column])))
-            df_filtered[column] = df_filtered[column] - trendline
-            # df_filtered[column] = df_filtered[column]['log'].rolling(window=period).mean()
-        else:
-            print(f"""Result - {column}: Stationary (adf_p_value:  {adf_p_value}
-                                    kpss_p_value: {kpss_p_value}
-                                    ks_p_value: {ks_p_value}""")
-        # moving average
-        sma = df_filtered[column].rolling(window=period).mean()
-        cma = df_filtered[column].expanding(min_periods=period).mean()
-        ema = df_filtered[column].ewm(span=period,adjust=False).mean()
-
-        axes[5,0].plot(df_filtered[column],label=f'Moving Average{column}',linewidth=3)
-        axes[5,0].plot(sma,label=f'{period}-{freq} Rolling SMA',linewidth=1.5)
-        axes[5,0].plot(cma,label=f'{period}-{freq} Expanding CMA',linewidth=1.5)        
-        axes[5,0].plot(ema,label=f'{period}-{freq} Exponential EMA',linewidth=2.5)
-        axes[5,0].legend()
-
-        # acf, pacf
-        plot_acf(df_filtered[column], lags=period, ax=axes[4,0])
-        plot_pacf(df_filtered[column], lags=period, ax=axes[4,1])
-
         
