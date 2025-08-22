@@ -658,9 +658,9 @@ def MyProphet(data, data_cols, ax, model, display = False, factor = 1.5):
     outliers = forecasting_final[forecasting_final['anomaly'] == 'Anomaly']
     return outliers.index
 def MyAgglomerativeClustering(data, data_cols, ax, model, 
-                              display     = False, 
-                              window_size = 10, 
-                              dendrogram  = False):
+                              display    = False, 
+                              step_size  = 10, 
+                              dendrogram = False):
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -683,7 +683,7 @@ def MyAgglomerativeClustering(data, data_cols, ax, model,
     series = data[data_cols].values.flatten()
 
     # Chuyển time-series thành sliding windows
-    X = np.array([series[i:i + window_size] for i in range(len(series) - window_size)])
+    X = np.array([series[i:i + step_size] for i in range(len(series) - step_size)])
     if X.shape[0] == 0:
         print("⚠️ Không đủ dữ liệu để tạo sliding windows.")
         return pd.Series(dtype=int)
@@ -809,7 +809,7 @@ def MyDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
     outlier_indices = np.where(labels == -1)[0]
 
     return outlier_indices
-def MyHDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
+def MyHDBSCAN(data, data_cols, ax, model, display = False, step_size=10):
     import numpy as np
     import pandas as pd
     from sklearn.preprocessing import StandardScaler
@@ -827,7 +827,7 @@ def MyHDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
     series = data[data_cols].values.flatten()
 
     # Chuyển time-series thành sliding windows
-    X = np.array([series[i:i+window_size] for i in range(len(series) - window_size)])
+    X = np.array([series[i:i+step_size] for i in range(len(series) - step_size)])
 
     # Standard hóa
     scaler   = StandardScaler()
@@ -870,10 +870,10 @@ def MyHDBSCAN(data, data_cols, ax, model, display = False, window_size=10):
 
     return outlier_indices
 def MyVanillaAutoencoder(data, data_cols, ax, 
-                         display     =  False, 
-                         window_size = 10, 
-                         epochs      = 10, 
-                         batch_size  = 32):
+                         display    =  False, 
+                         step_size  = 10, 
+                         epochs     = 10, 
+                         batch_size = 32):
     import numpy as np
     import pandas as pd
     import tensorflow as tf
@@ -893,7 +893,7 @@ def MyVanillaAutoencoder(data, data_cols, ax,
     series = data[data_cols].values.flatten()
 
     # Sliding window
-    X = np.array([series[i:i+window_size] for i in range(len(series) - window_size)])
+    X = np.array([series[i:i+step_size] for i in range(len(series) - step_size)])
 
     # Chuẩn hóa
     scaler   = StandardScaler()

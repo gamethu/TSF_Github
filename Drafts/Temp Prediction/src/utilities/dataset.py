@@ -225,7 +225,8 @@ def HandleMissing_interpolate(data, method):
 
     for col in data.columns:
         if data[col].isnull().any():
-            data[col] = data[col].interpolate(method=method)
+            data[col] = data[col].interpolate(method          = method,
+                                              limit_direction = "both")
 
     # Gán lại timezone cũ cho index
     if tzinfo is not None:
@@ -701,7 +702,8 @@ def handle_feature_outliers_over_time(data, data_cols,
         if freq:
             df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered  = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                     method = "time").reset_index()
 
         df_filtered = df_filtered.set_index('time')
         outlier_idx = list(df_filtered.index) 
@@ -799,7 +801,8 @@ def handle_feature_outliers_over_time(data, data_cols,
                     df_filtered.loc[outlier_idx, feature] = np.nan
                     
                     # Dùng nội suy tuyến tính (linear) để lấp giá trị NaN
-                    df_filtered[feature] = df_filtered[feature].interpolate(method='linear')
+                    df_filtered[feature] = df_filtered[feature].interpolate(method          = 'time',
+                                                                            limit_direction = "both")
                 else:
                     print("Khong co outlier, skip!!!")
                     continue
@@ -886,7 +889,7 @@ def handle_feature_outliers_over_time(data, data_cols,
                                                             data_cols   = feature,
                                                             model       = MAC_model,
                                                             display     = False,
-                                                            window_size = window_size,
+                                                            step_size   = step_size,
                                                             dendrogram  = dendrogram,
                                                             ax          = list([None,None]))
                     print(f"🔹 {feature} (AgglomerativeClustering, {MAC_model}): {len(MAC_outlier)} outliers ~ {len(MAC_outlier)/len(df_filtered[feature]):.2%}")
@@ -900,7 +903,7 @@ def handle_feature_outliers_over_time(data, data_cols,
                                           data_cols   = feature,
                                           model       = M_model,
                                           display     = False,
-                                          window_size = window_size,
+                                          step_size   = step_size,
                                           ax          = None)
                     print(f"🔹 {feature} (HDBSCAN, {M_model}): {len(M_outlier)} outliers ~ {len(M_outlier)/len(df_filtered[feature]):.2%}")
                     if len(M_outlier) > 0:
@@ -912,6 +915,7 @@ def handle_feature_outliers_over_time(data, data_cols,
                     MVA_outlier = MyVanillaAutoencoder(data        = df_filtered.reset_index(), # Slow!!!
                                                        data_cols   = feature,
                                                        display     = False,
+                                                       step_size   = step_size,
                                                     #    model       = MVA_model,
                                                        ax          = None)
                     print(f"🔹 {feature} (VanillaAutoencoder): {len(MVA_outlier)} outliers ~ {len(MVA_outlier)/len(df_filtered[feature]):.2%}")
@@ -949,12 +953,15 @@ def handle_feature_outliers_over_time(data, data_cols,
                     axes[1,0].grid(True)
                     
                 # Handle
-                if len(outlier_idx) > 0 and len(outlier_idx)!=len(df_filtered.index):
+                if (len(outlier_idx) > 0 
+                    and len(outlier_idx)!=len(df_filtered.index)
+                    and outlier_ratio <= threshold):
                     # Gán NaN vào các outlier
                     df_filtered.loc[outlier_idx, feature] = np.nan
 
                     # Dùng nội suy tuyến tính (linear) để lấp giá trị NaN
-                    df_filtered[feature] = df_filtered[feature].interpolate(method='linear')
+                    df_filtered[feature] = df_filtered[feature].interpolate(method          = 'time',
+                                                                            limit_direction = "both")
                 else:
                     print("Khong co outlier, skip!!!")
                     continue

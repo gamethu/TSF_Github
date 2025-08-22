@@ -67,6 +67,12 @@ def plot_feature_trends_over_time(data, data_cols,
     import pandas as pd
     import matplotlib.pyplot as plt
     
+    import sys
+    import os
+    sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
     # Nếu là dict nhiều trạm
     if isinstance(data, dict):
         station = data
@@ -89,7 +95,8 @@ def plot_feature_trends_over_time(data, data_cols,
 
                 # Chỉ giữ các cột số
                 numeric_cols = df_filtered.select_dtypes(include='number').columns
-                df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+                df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                        method = "time").reset_index()
 
 
             # Duyệt từng cặp feature
@@ -139,7 +146,8 @@ def plot_feature_trends_over_time(data, data_cols,
             
             # Chỉ giữ các cột số
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                    method = "time").reset_index()
 
 
         for i in range(0, len(data_cols)):
@@ -197,6 +205,8 @@ def plot_feature_outliers_over_time(data, data_cols,
     import sys
     import os
     sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
 
 
     if isinstance(data, pd.DataFrame):
@@ -217,7 +227,8 @@ def plot_feature_outliers_over_time(data, data_cols,
         if freq:
             df_filtered = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                    method = "time").reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -421,6 +432,8 @@ def evaluate_feature_outliers_over_time(data, data_cols,
     import sys
     import os
     sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
 
 
     if isinstance(data, pd.DataFrame):
@@ -441,7 +454,8 @@ def evaluate_feature_outliers_over_time(data, data_cols,
         if freq:
             df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                    method = "time").reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -626,7 +640,9 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
     import numpy as np
     import sys
     import os
-    sys.path.append(os.path.abspath("../../src"))
+    sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
     
     if isinstance(data, pd.DataFrame):
         name = station_name if station_name else "Unknown"
@@ -646,7 +662,8 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
         if freq:
             df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                    method = "time").reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -842,6 +859,7 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
                                   start_time = None,
                                   end_time   = None,
                                   step_size  = 24,
+                                  record     = None,
                                   freq       = None):
     import seaborn as sns
     import pandas as pd
@@ -852,7 +870,9 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
     import numpy as np
     import sys
     import os
-    sys.path.append(os.path.abspath("../../src"))
+    sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
     
     if isinstance(data, pd.DataFrame):
         name = station_name if station_name else "Unknown"
@@ -872,7 +892,8 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
         if freq:
             df_filtered  = df_filtered.set_index('time')
             numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered  = df_filtered[numeric_cols].resample(freq).mean().interpolate().reset_index()
+            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                    method = "time").reset_index()
 
         df_filtered = df_filtered.set_index('time')
 
@@ -1006,13 +1027,23 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
             if global_d[best_param_key] < global_best:
                 print(global_d)
                 print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+                if record is not None:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+                else:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
             else:
                 print(global_d)
                 print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+                if record is not None:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
+                else:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
 
                     # # Option 6
                     # if metrics.get("R2") is not None:
@@ -1150,13 +1181,23 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
             if global_d[best_param_key] < global_best:
                 print(global_d)
                 print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+                if record is not None:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+                else:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
             else:
                 print(global_d)
                 print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
                 print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+                if record is not None:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
+                else:
+                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
 
                 # # Option 6
                 # if metrics.get("R2") is not None:
