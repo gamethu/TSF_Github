@@ -1223,109 +1223,137 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
-def original(data,
-             data_cols = None,
-             display   = False,
-             period    = None,
-             ax        = None):
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    if display is True:
-        for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
-            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
-            ax[i].plot(data[data_cols], 'gray', label='Original ' + model)
-            ax[i].plot(result.trend, 'red', label='Trend')
-            ax[i].legend()
 
-def trend(data,
-          data_cols = None,
-          display   = False,
-          period    = None,
-          ax        = None):
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    if display is True:
-        for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
-            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
-            ax[i].plot(result.trend, 'blue', label='Trend')
-            ax[i].legend()
-        
-            
-def seasonality(data,
-                data_cols = None,
-                display   = False,
-                period    = None,
-                ax        = None):
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    if display is True:
-        for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
-            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
-            ax[i].plot(result.seasonal, 'green', label='Seasonality')
-            ax[i].legend()
-def residuals(data,
-              data_cols = None,
-              display   = False,
-              period    = None,
-              ax        = None):
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    if display is True:
-        for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
-            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
-            ax[i].plot(result.resid, 'red', label='Residuals')
-            ax[i].legend()
-
-def correlation_analysis(data,
-                         data_cols = None,
-                         display   = False,
-                         period    = None,
-                         ax        = None):
-    from statsmodels.graphics.tsaplots import plot_acf
-    from statsmodels.graphics.tsaplots import plot_pacf
-    if display is True:
-        # acf, pacf
-        plot_acf(data[data_cols], lags=period, ax=ax[0])
-        plot_pacf(data[data_cols], lags=period, ax=ax[1])
-def mutual_information(data,
-                       data_cols = None,
-                       display   = False,
-                       period    = None,
-                       ax        = None):
-    import sys
-    sys.path.append("../")  # đường dẫn đến thư mục chứa src
-
-    from src.utilities import(config, 
-                              dataset, 
-                              features, 
-                              plots)
+def plot_periodogram(ts, detrend='linear', ax=None):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from scipy.signal import periodogram
+    fs = pd.Timedelta("365D") / pd.Timedelta("1D")
+    freqencies, spectrum = periodogram(
+        ts,
+        fs=fs,
+        # detrend=detrend,
+        # window="boxcar",
+        # scaling='spectrum',
+    )
+    if ax is None:
+        _, ax = plt.subplots(figsize=(15, 6))
+    ax.step(freqencies, spectrum, color="purple")
+    ax.set_xscale("log")
+    ax.set_xticks([1, 2, 4, 6, 12, 26, 52, 104])
+    ax.set_xticklabels(
+        [
+            "Annual (1)",
+            "Semiannual (2)",
+            "Quarterly (4)",
+            "Bimonthly (6)",
+            "Monthly (12)",
+            "Biweekly (26)",
+            "Weekly (52)",
+            "Semiweekly (104)",
+        ],
+        rotation=30,
+    )
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    ax.set_ylabel("Variance")
+    ax.set_title("Periodogram")
+    return ax
+  
+def seasonal_plot(data, data_cols, period, freq, 
+                  display = False,
+                  ax      = None):
+    import seaborn as sns
+    X = data.copy()
     
-    PROJ_SEED = config.getSeed()
-    mi_scores = make_mi_scores(features     = data, 
-                                    target       = data[data_cols],
-                                    type         = "regression",
-                                    random_state = PROJ_SEED)
+    X["dayofweek"] = X.index.dayofweek  # the x-axis (freq)# days within a week
+    X["week"] = X.index.isocalendar().week  # the seasonal period (period)
+    X["dayofmonth"] = X.index.day  # the x-axis (freq)
+    X["month"] = X.index.month  # the seasonal period (period)
+    # days within a year
+    X["dayofyear"] = X.index.dayofyear
+    X["year"] = X.index.year
 
-    print(mi_scores)
-    if display is True:
-        plot_mi_scores(mi_scores)
+    # Semiannual: 2 kỳ/năm → 1–2
+    X["semiannual"] = (X.index.month - 1) // 6 + 1
 
-def ts_analysis(data,
-                data_cols = None,
-                method           = "short",
-                analysis    = list([
-                                    "original",
-                                    "trend",  
-                                    # "seasonal",
-                                    # "resid",
-                                    # "correlation",
-                                    # "mutual"
+    # Quarterly: 4 kỳ/năm → 1–4
+    X["quarterly"] = (X.index.month - 1) // 3 + 1
+
+    # Bimonthly: 6 kỳ/năm → 1–6
+    X["bimonthly"] = (X.index.month - 1) // 2 + 1
+
+    # Biweekly: 26 kỳ/năm → tuần lẻ/chu kỳ 2 tuần
+    X["biweekly"] = (X.index.isocalendar().week - 1) // 2 + 1
+
+    # Semiweekly: 104 kỳ/năm → 1 kỳ = nửa tuần → tính theo ngày trong tuần
+    X["semiweekly"] = (X.index.dayofyear - 1) // (365/104) + 1
+    X["semiweekly"] = X["semiweekly"].astype(int)  # chuyển sang int
+    
+    y = data_cols
+
+    if display is True:        
+        palette = sns.color_palette("husl", n_colors=X[period].nunique(),)
+        ax = sns.lineplot(
+            x       = freq,
+            y       = y,
+            hue     = period,
+            data    = X,
+            ci      = False,
+            ax      = ax,
+            palette = palette,
+            legend  = False,
+        )
+        ax.set_title(f"Seasonal Plot ({period}/{freq})")
+        for line, name in zip(ax.lines, X[period].unique()):
+            y_ = line.get_ydata()[-1]
+            ax.annotate(
+                name,
+                xy         = (1, y_),
+                xytext     = (6, 0),
+                color      = line.get_color(),
+                xycoords   = ax.get_yaxis_transform(),
+                textcoords = "offset points",
+                size       = 14,
+                va         = "center",
+            )
+        return ax
+
+def seasonal_forecast(data, data_cols):
+    import pandas as pd
+    from statsmodels.tsa.deterministic import CalendarFourier, DeterministicProcess
+    from sklearn.linear_model import LinearRegression
+
+    df = data.asfreq("D")   
+    fourier = CalendarFourier(freq="A", order=10)  # 10 sin/cos pairs for "A"nnual seasonality
+    dp = DeterministicProcess(
+        index            = df.index,
+        constant         = True,               # dummy feature for bias (y-intercept)
+        order            = 1,                     # trend (order 1 means linear)
+        seasonal         = False,               # weekly seasonality (indicators)
+        additional_terms = [fourier],  # annual seasonality (fourier)
+        drop             = True,                   # drop terms to avoid collinearity
+    )
+    X_dp = dp.in_sample()  # create features for dates in tunnel.index    
+    y = df[data_cols]
+    model = LinearRegression(fit_intercept=False)
+    _ = model.fit(X_dp, y)
+    y_pred = pd.Series(model.predict(X_dp), index=y.index)
+    X_fore = dp.out_of_sample(steps=90)
+    y_fore = pd.Series(model.predict(X_fore), index=X_fore.index)
+    return y, y_pred, y_fore
+
+def seasonal_anlysis(data, data_cols,
+                    method     = "short",
+                    seasonal   = list([
+                                    "weekly", 
+                                    "monthly", 
+                                    "yearly"
                                     ]),
-                display    = False,
-                start_time = None, 
-                end_time = None, 
-                freq = None,
-                period = 24):
+                    display    = False,
+                    start_time = None, 
+                    end_time   = None, 
+                    freq       = None):   
+    
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
@@ -1349,105 +1377,321 @@ def ts_analysis(data,
         df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
                                                 method = "time")
 
+    for column in data_cols:    
+        if method == "short":
+            # Option 1
+            if "Annual" in seasonal: 
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "year",
+                              display   = False,
+                              ax        = None)           
+            # Option 2
+            if "Semiannual" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "semiannual",
+                              display   = False,
+                              ax        = None)
+            # Option 3
+            if "Quarterly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "quarterly",
+                              display   = False,
+                              ax        = None)
+            # Option 4
+            if "Bimonthly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofmonth",
+                              period    = "bimonthly",
+                              display   = False,
+                              ax        = None)
+            # Option 5
+            if "Monthly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofmonth",
+                              period    = "month",
+                              display   = False,
+                              ax        = None)
+            # Option 6
+            if "Biweekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "biweekly",
+                              display   = False,
+                              ax        = None)
+            # Option 7
+            if "Weekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "week",
+                              display   = False,
+                              ax        = None)
+            # Option 8
+            if "Semiweekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "semiweekly",
+                              display   = False,
+                              ax        = None)
+                
+        elif method == "full":        
+            fig, ax = plt.subplots(4, 2, figsize=(16, 10))
+
+            # Option 1
+            if "Annual" in seasonal: 
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "year",
+                              display   = display,
+                              ax        = ax[0,0])           
+            # Option 2
+            if "Semiannual" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "semiannual",
+                              display   = display,
+                              ax        = ax[0,1])
+            # Option 3
+            if "Quarterly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofyear",
+                              period    = "quarterly",
+                              display   = display,
+                              ax        = ax[1,0])
+            # Option 4
+            if "Bimonthly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofmonth",
+                              period    = "bimonthly",
+                              display   = display,
+                              ax        = ax[1,1])
+            # Option 5
+            if "Monthly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofmonth",
+                              period    = "month",
+                              display   = display,
+                              ax        = ax[2,0])
+            # Option 6
+            if "Biweekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "biweekly",
+                              display   = display,
+                              ax        = ax[2,1])
+            # Option 7
+            if "Weekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "week",
+                              display   = display,
+                              ax        = ax[3,0])
+            # Option 8
+            if "Semiweekly" in seasonal:
+                seasonal_plot(data      = data,
+                              data_cols = column,
+                              freq      = "dayofweek",
+                              period    = "semiweekly",
+                              display   = display,
+                              ax        = ax[3,1])
+
+def moving_average(data, data_cols, period):
+    return data[data_cols].rolling(window      = period,         # 365-day window
+                                   center      = True,           # puts the average at the center of the window
+                                   min_periods = period // 2,    # choose about half the window size
+                                  ).mean()                       # compute the mean (could also do median, std, min, max, ...)
+
+def trend_forecast(data, data_cols):
+    import pandas as pd
+    from statsmodels.tsa.deterministic import DeterministicProcess
+    from sklearn.linear_model import LinearRegression
+
+    df = data.asfreq("D") 
+    dp = DeterministicProcess(index    = df.index,     # dates from the training data
+                              constant = True,         # dummy feature for the bias (y_intercept)
+                              order    = 2,            # the time dummy (trend)
+                              drop     = True)         # drop terms if necessary to avoid collinearity
+    # `in_sample` creates features for the dates given in the `index` argument
+    X = dp.in_sample()
+    y = df[data_cols]  # the target
+    # The intercept is the same as the `const` feature from
+    # DeterministicProcess. LinearRegression behaves badly with duplicated
+    # features, so we need to be sure to exclude it here.
+    model = LinearRegression(fit_intercept=False)
+    model.fit(X, y)
+    y_pred = pd.Series(model.predict(X), index=X.index)
+    X = dp.out_of_sample(steps=30)
+    y_fore = pd.Series(model.predict(X), index=X.index)
+    return y_pred, y_fore
+
+def trend(data,
+          data_cols,
+          display   = False,
+          period    = None,
+          ax        = None):
+    import seaborn as sns
+    from warnings import simplefilter
+    import matplotlib.pyplot as plt
+
+    simplefilter("ignore")  # ignore warnings to clean up output cells
+    # Set Matplotlib defaults
+    sns.set_theme(style="whitegrid")  # tương đương seaborn-whitegrid
+    plt.rc("figure", autolayout=True, figsize=(11, 5))
+    plt.rc(
+        "axes",
+        labelweight="bold",
+        labelsize="large",
+        titleweight="bold",
+        titlesize=14,
+        titlepad=10,
+    )
+    plot_params = dict(
+        color="0.75",
+        style=".-",
+        markeredgecolor="0.25",
+        markerfacecolor="0.25",
+        legend=False,
+    )
+
+    ma = moving_average(data, data_cols, period)
+    y_pred, y_fore = trend_forecast(data, data_cols)
+
+    if display is True:
+        data[data_cols].plot(style=".", color="0.5", ax=ax[0])
+        ma.plot(linewidth= 3, 
+                title    = f"{data_cols} - {period}-Day Moving Average",
+                label    = f"{period}-Day MA",
+                ax       = ax[0],
+                color    = "red")
+        ax[0].legend()
+        
+        data[data_cols].plot(style=".", color="0.5", title=f"{data_cols} - Linear Trend", ax=ax[1])
+        y_pred.plot(ax=ax[1], linewidth=3, label="Trend",color="red")
+        ax[1].legend()
+        
+        data[data_cols].plot(ax=ax[2], title=f"{data_cols} - Linear Trend Forecast", **plot_params)
+        y_pred.plot(ax=ax[2], linewidth=3, label="Trend")
+        y_fore.plot(ax=ax[2], linewidth=3, label="Trend Forecast", color="C3")
+        ax[2].legend()
+    
+def residuals(data,
+              data_cols,
+              display   = False,
+              period    = None,
+              ax        = None):
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    if display is True:
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(result.resid, 'red', label='Residuals')
+            ax[i].legend()
+
+def ts_analysis(data,
+                data_cols = None,
+                method           = "short",
+                analysis    = list([
+                                    "trend",  
+                                    # "resid",
+                                    ]),
+                display    = False,
+                start_time = None, 
+                end_time = None, 
+                freq = None,
+                period = 365):
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    import sys
+    import os
+    sys.path.append(os.path.abspath("../src"))
+    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
+    start_time = pd.to_datetime(start_time)
+    end_time   = pd.to_datetime(end_time)
+    df_filtered = data.copy()
+    if start_time:
+        df_filtered = df_filtered[df_filtered.index >= start_time]
+    if end_time:
+        df_filtered = df_filtered[df_filtered.index <= end_time]
+    if freq:        
+        # Chỉ giữ các cột số
+        numeric_cols = df_filtered.select_dtypes(include='number').columns
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
 
     for column in data_cols:    
         if method == "short":
             # Option 1
-            if "original" in analysis:
-                original(data     = df_filtered,
-                         data_cols = column,
-                         display   = False,
-                         period    = period,
-                         ax        = None)
-
-            # Option 2
             if "trend" in analysis:
-                trend(data    = df_filtered,
+                trend(data      = df_filtered,
                       data_cols = column,
                       display   = False,
                       period    = period,
                       ax        = None)
-              
-            # Option 3
-            if "seasonal" in analysis:
-                seasonality(data      = df_filtered,
-                            data_cols = column,
-                            display   = False,
-                            period    = period,
-                            ax        = None)
-              
-            # Option 4
-            if "resid" in analysis:
-                residuals(data    = df_filtered,
-                        data_cols = column,
-                        display   = False,
-                        period    = period,
-                        ax        = None)
-              
-            # Option 5
-            if "correlation" in analysis:
-                correlation_analysis(data     = df_filtered,
-                                    data_cols = column,
-                                    display   = False,
-                                    period    = period,
-                                    ax        = None)
-              
-            # Option 6
-            if "mutual" in analysis:
-                mutual_information(data   = df_filtered,
-                                data_cols = column,
-                                display   = False,
-                                period    = period,
-                                ax        = None)
-        elif method == "full":        
-            fig, axes = plt.subplots(6, 2, figsize=(20, 20))
-            # Option 1
-            if "original" in analysis:
-                original(data     = df_filtered,
-                        data_cols = column,
-                        display   = display,
-                        period    = period,
-                        ax        = list([axes[0,0],axes[0,1]]))
 
             # Option 2
-            if "trend" in analysis:
-                trend(data    = df_filtered,
-                    data_cols = column,
-                    display   = display,
-                    period    = period,
-                    ax        = list([axes[1,0],axes[1,1]]))
+            if "resid" in analysis:
+                residuals(data      = df_filtered,
+                          data_cols = column,
+                          display   = False,
+                          period    = period,
+                          ax        = None)
               
-            # Option 3
-            if "seasonal" in analysis:
-                seasonality(data      = df_filtered,
-                            data_cols = column,
-                            display   = display,
-                            period    = period,
-                            ax        = list([axes[2,0],axes[2,1]]))
+            # Option 3            
               
             # Option 4
-            if "resid" in analysis:
-                residuals(data    = df_filtered,
-                        data_cols = column,
-                        display   = display,
-                        period    = period,
-                        ax        = list([axes[3,0],axes[3,1]]))
               
             # Option 5
-            if "correlation" in analysis:
-                correlation_analysis(data     = df_filtered,
-                                    data_cols = column,
-                                    display   = display,
-                                    period    = period,
-                                    ax        = list([axes[4,0],axes[4,1]]))
               
             # Option 6
-            if "mutual" in analysis:
-                mutual_information(data   = df_filtered,
-                                data_cols = column,
-                                display   = display,
-                                period    = period,
-                                ax        = list([axes[5,0],axes[5,1]]))
+            
+        elif method == "full":        
+            fig, axes = plt.subplots(3, 2, figsize=(20, 20))
+
+            # Option 1
+            if "trend" in analysis:
+                trend(data      = df_filtered,
+                      data_cols = column,
+                      display   = display,
+                      period    = period,
+                      ax        = list([axes[0,0],axes[0,1],axes[1,0]]))
+              
+            # Option 2
+            if "resid" in analysis:
+                residuals(data      = df_filtered,
+                          data_cols = column,
+                          display   = display,
+                          period    = period,
+                          ax        = list([axes[2,0],axes[2,1]]))
+              
+            # Option 3            
+              
+            # Option 4            
+              
+            # Option 5
+
+            # Option 6
+            
 
 
 
