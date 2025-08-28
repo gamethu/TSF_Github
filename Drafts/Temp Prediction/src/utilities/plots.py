@@ -12,23 +12,23 @@ def plot_Outlier(data, data_cols, target=None):
     import matplotlib.pyplot as plt
 
     num_cols = len(data_cols)
-    ncols = 2
-    nrows = num_cols
+    ncols    = 2
+    nrows    = num_cols
 
     fig, axes = plt.subplots(
-        nrows=nrows,
-        ncols=ncols,
-        figsize=(6 * ncols, 4 * nrows)
+        nrows   = nrows,
+        ncols   = ncols,
+        figsize = (6 * ncols, 4 * nrows)
     )
 
     for i, column in enumerate(data_cols):
         # Histplot
-        sns.histplot(
-            data=data,
-            x=column,
-            hue=target if target else None,
-            kde=True,
-            ax=axes[i, 0]
+        sns.kdeplot(
+            data = data,
+            x    = column,
+            hue  = target if target else None,
+            fill = True,
+            ax   = axes[i, 0]
         )
         if target:
             axes[i, 0].set_title(f'Histogram: {column} by {target}')
@@ -39,21 +39,21 @@ def plot_Outlier(data, data_cols, target=None):
         # Boxplot
         if target:
             sns.boxplot(
-                data=data,
-                x=target,
-                y=column,
-                ax=axes[i, 1]
+                data = data,
+                x    = column,
+                y    = target,
+                ax   = axes[i, 1]
             )
             axes[i, 1].set_title(f'Boxplot: {column} by {target}')
-            axes[i, 1].set_xlabel(target)
+            axes[i, 1].set_ylabel(target)
         else:
             sns.boxplot(
-                data=data,
-                y=column,
-                ax=axes[i, 1]
+                data = data,
+                x    = column,
+                ax   = axes[i, 1]
             )
             axes[i, 1].set_title(f'Boxplot: {column}')
-        axes[i, 1].set_ylabel(column)
+        # axes[i, 1].set_xlabel(column)
         axes[i, 1].grid(True)
 
     plt.tight_layout()
@@ -397,7 +397,7 @@ def make_mi_scores(features, target, random_state, type):
     mi_scores = pd.Series(mi_scores, name="MI Scores", index=features.columns)
     mi_scores = mi_scores.sort_values(ascending=False)
     return mi_scores
-def plot_mi_scores(scores):
+def plot_mi_scores(scores, label = None):
     from matplotlib import pyplot as plt
     import numpy as np
     
@@ -405,8 +405,9 @@ def plot_mi_scores(scores):
     scores = scores.sort_values(ascending=True)
     width  = np.arange(len(scores))
     ticks  = list(scores.index)
-    plt.barh(width, scores)
+    plt.barh(width, scores, label = label)
     plt.yticks(width, ticks)
+    plt.legend()
     plt.title("Mutual Information Scores")
 
 def evaluate_feature_outliers_over_time(data, data_cols,
@@ -1224,21 +1225,18 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
     else:
         raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
 
-def plot_periodogram(ts, detrend='linear', ax=None):
+def plot_periodogram(ts, detrend='linear', ax=None, label=None, color=None):
     import pandas as pd
     import matplotlib.pyplot as plt
     from scipy.signal import periodogram
+
     fs = pd.Timedelta("365D") / pd.Timedelta("1D")
-    freqencies, spectrum = periodogram(
-        ts,
-        fs=fs,
-        # detrend=detrend,
-        # window="boxcar",
-        # scaling='spectrum',
-    )
+    freqencies, spectrum = periodogram(ts, fs=fs)
+    
     if ax is None:
         _, ax = plt.subplots(figsize=(15, 6))
-    ax.step(freqencies, spectrum, color="purple")
+
+    ax.step(freqencies, spectrum, color=color or "purple", label=label)
     ax.set_xscale("log")
     ax.set_xticks([1, 2, 4, 6, 12, 26, 52, 104])
     ax.set_xticklabels(
@@ -1257,6 +1255,7 @@ def plot_periodogram(ts, detrend='linear', ax=None):
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     ax.set_ylabel("Variance")
     ax.set_title("Periodogram")
+    
     return ax
   
 def seasonal_plot(data, data_cols, period, freq, 
@@ -1549,7 +1548,8 @@ def trend(data,
     import seaborn as sns
     from warnings import simplefilter
     import matplotlib.pyplot as plt
-
+    from statsmodels.tsa.seasonal import seasonal_decompose
+    
     simplefilter("ignore")  # ignore warnings to clean up output cells
     # Set Matplotlib defaults
     sns.set_theme(style="whitegrid")  # tương đương seaborn-whitegrid
@@ -1574,23 +1574,11 @@ def trend(data,
     y_pred, y_fore = trend_forecast(data, data_cols)
 
     if display is True:
-        data[data_cols].plot(style=".", color="0.5", ax=ax[0])
-        ma.plot(linewidth= 3, 
-                title    = f"{data_cols} - {period}-Day Moving Average",
-                label    = f"{period}-Day MA",
-                ax       = ax[0],
-                color    = "red")
-        ax[0].legend()
-        
-        data[data_cols].plot(style=".", color="0.5", title=f"{data_cols} - Linear Trend", ax=ax[1])
-        y_pred.plot(ax=ax[1], linewidth=3, label="Trend",color="red")
-        ax[1].legend()
-        
-        data[data_cols].plot(ax=ax[2], title=f"{data_cols} - Linear Trend Forecast", **plot_params)
-        y_pred.plot(ax=ax[2], linewidth=3, label="Trend")
-        y_fore.plot(ax=ax[2], linewidth=3, label="Trend Forecast", color="C3")
-        ax[2].legend()
-    
+        for i, model in enumerate(["additive", "multiplicative"]):            
+            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
+            ax[i].plot(result.seasonal, 'green', label='Seasonality')
+            ax[i].legend()
 def residuals(data,
               data_cols,
               display   = False,
@@ -1599,10 +1587,46 @@ def residuals(data,
     from statsmodels.tsa.seasonal import seasonal_decompose
     if display is True:
         for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
+            result = seasonal_decompose(data[data_cols], 
+                                        model  = model, 
+                                        period = period)            
             ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
             ax[i].plot(result.resid, 'red', label='Residuals')
             ax[i].legend()
+
+def correlation_analysis(data,
+                         data_cols = None,
+                         display   = False,
+                         period    = None,
+                         ax        = None):
+    from statsmodels.graphics.tsaplots import plot_acf
+    from statsmodels.graphics.tsaplots import plot_pacf
+    if display is True:
+        # acf, pacf
+        plot_acf(data[data_cols], lags=period, ax=ax[0])
+        plot_pacf(data[data_cols], lags=period, ax=ax[1])
+def mutual_information(data,
+                       data_cols = None,
+                       display   = False,
+                       period    = None,
+                       ax        = None):
+    import sys
+    sys.path.append("../")  # đường dẫn đến thư mục chứa src
+
+    from src.utilities import(config, 
+                              dataset, 
+                              features, 
+                              plots)
+    
+    PROJ_SEED = config.getSeed()
+    mi_scores = make_mi_scores(features     = data, 
+                                    target       = data[data_cols],
+                                    type         = "regression",
+                                    random_state = PROJ_SEED)
+
+    print(mi_scores)
+    if display is True:
+        plot_mi_scores(mi_scores)
 
 def ts_analysis(data,
                 data_cols = None,
