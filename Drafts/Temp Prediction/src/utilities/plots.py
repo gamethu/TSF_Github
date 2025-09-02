@@ -618,7 +618,9 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
         ax[1].grid(True, axis="y")        
 
 # Custom evaluation function to replace plots.evaluate_model
-def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, y_pred,
+def plot_evaluate_model_over_time(
+                                #   data, 
+                                  target_cols_name, station_name, y_true, y_pred,
                                   method           = "short",
                                   metrics    = list([
                                                      "R2",   
@@ -645,223 +647,225 @@ def plot_evaluate_model_over_time(data, target_cols_name, station_name, y_true, 
     
     from src.utilities.dataset import HandleMissing_interpolate
     
-    if isinstance(data, pd.DataFrame):
-        name = station_name if station_name else "Unknown"
-        print(f"🔸 Trạm: {name}")
+    # if isinstance(data, pd.DataFrame):
+    name = station_name if station_name else "Unknown"
+    print(f"🔸 Trạm: {name}")
 
-        start_time_ = pd.to_datetime(start_time) if start_time else None
-        end_time_   = pd.to_datetime(end_time)   if end_time else None
-        df_filtered = data.copy()
-        df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
-        df_filtered = df_filtered.dropna(subset=['time'])
+    #     start_time_ = pd.to_datetime(start_time) if start_time else None
+    #     end_time_   = pd.to_datetime(end_time)   if end_time else None
+    #     df_filtered = data.copy()
+    #     df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
+    #     df_filtered = df_filtered.dropna(subset=['time'])
 
-        if start_time_ is not None:
-            df_filtered = df_filtered[df_filtered['time'] >= start_time_]
-        if end_time_ is not None:
-            df_filtered = df_filtered[df_filtered['time'] <= end_time_]
+    #     if start_time_ is not None:
+    #         df_filtered = df_filtered[df_filtered['time'] >= start_time_]
+    #     if end_time_ is not None:
+    #         df_filtered = df_filtered[df_filtered['time'] <= end_time_]
 
-        if freq:
-            df_filtered  = df_filtered.set_index('time')
-            numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
-                                                    method = "time").reset_index()
+    #     if freq:
+    #         df_filtered  = df_filtered.set_index('time')
+    #         numeric_cols = df_filtered.select_dtypes(include='number').columns
+    #         df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+    #                                                 method = "time").reset_index()
 
-        df_filtered = df_filtered.set_index('time')
+    #     df_filtered = df_filtered.set_index('time')
 
-        if method == "short":
-            from scripts.evaluate_model import (My_R2_SCORE,
-                                                My_MAE_SCORE,
-                                                My_MSE_SCORE,
-                                                My_MSLE_SCORE,
-                                                My_MAPE_SCORE)
-            # Option 1
-            if "R2" in metrics:
-                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+    if method == "short":
+        from scripts.evaluate_model import (My_R2_SCORE,
+                                            My_MAE_SCORE,
+                                            My_MSE_SCORE,
+                                            My_MSLE_SCORE,
+                                            My_MAPE_SCORE)
+        # Option 1
+        if "R2" in metrics:
+            R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                                                        y_pred    = y_pred,
+                                                        y_true    = y_true,
+                                                        display   = False,
+                                                        step_size = step_size,
+                                                        freq      = freq,
+                                                        ax        = None)
+            print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
+            print()                    
+        
+        # Option 2
+        if "MAE" in metrics:
+            MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                             y_pred    = y_pred,
                                                             y_true    = y_true,
                                                             display   = False,
                                                             step_size = step_size,
                                                             freq      = freq,
                                                             ax        = None)
-                print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
-                print()                    
+            print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
+            print()
             
-            # Option 2
-            if "MAE" in metrics:
-                MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = False,
-                                                               step_size = step_size,
-                                                               freq      = freq,
-                                                               ax        = None)
-                print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
-                print()
-              
-            # Option 3
-            if "MSE" in metrics:
-                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = False,
-                                                               step_size = step_size,
-                                                               freq      = freq,
-                                                               ax        = None)
-                print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
-                print()
-              
-            # Option 4
-            if "MSLE" in metrics:
-                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = False,
-                                                                  step_size = step_size,
-                                                                  freq      = freq,
-                                                                  ax        = None)
-                print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
-                print()
-              
-            # Option 5
-            if "MAPE" in metrics:
-                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = False,
-                                                                  step_size = step_size,
-                                                                  freq      = freq,
-                                                                  ax        = None)
-                print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
-                print()
-              
-            # # Option 6
-            # if metrics.get("R2") is not None:
-            #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
-            #                                                 y_pred    = y_pred,
-            #                                                 y_true    = y_true,
-            #                                                 display   = False,
-            #                                                 freq      = freq,
-            #                                                 ax        = None)
-            #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
-            #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
-            #     print()
-        elif method == "full":        
-            fig, axes = plt.subplots(6, 2, figsize=(20, 30))
+        # Option 3
+        if "MSE" in metrics:
+            MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
+                                                            y_pred    = y_pred,
+                                                            y_true    = y_true,
+                                                            display   = False,
+                                                            step_size = step_size,
+                                                            freq      = freq,
+                                                            ax        = None)
+            print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
+            print()
             
-            from scripts.evaluate_model import (My_R2_SCORE,
-                                                My_MAE_SCORE,
-                                                My_MSE_SCORE,
-                                                My_MSLE_SCORE,
-                                                My_MAPE_SCORE)
-            # Option 1
-            if "R2" in metrics:
-                R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+        # Option 4
+        if "MSLE" in metrics:
+            MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_pred,
+                                                                y_true    = y_true,
+                                                                display   = False,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = None)
+            print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
+            print()
+            
+        # Option 5
+        if "MAPE" in metrics:
+            MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_pred,
+                                                                y_true    = y_true,
+                                                                display   = False,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = None)
+            print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
+            print()
+            
+        # # Option 6
+        # if metrics.get("R2") is not None:
+        #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+        #                                                 y_pred    = y_pred,
+        #                                                 y_true    = y_true,
+        #                                                 display   = False,
+        #                                                 freq      = freq,
+        #                                                 ax        = None)
+        #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
+        #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+        #     print()
+    elif method == "full":        
+        fig, axes = plt.subplots(6, 2, figsize=(20, 30))
+        
+        from scripts.evaluate_model import (My_R2_SCORE,
+                                            My_MAE_SCORE,
+                                            My_MSE_SCORE,
+                                            My_MSLE_SCORE,
+                                            My_MAPE_SCORE)
+        # Option 1
+        if "R2" in metrics:
+            R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                                                        y_pred    = y_pred,
+                                                        y_true    = y_true,
+                                                        display   = display,
+                                                        step_size = step_size,
+                                                        freq      = freq,
+                                                        ax        = list([axes[0,0],axes[0,1]]))
+            print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
+            print()                    
+        
+        # Option 2
+        if "MAE" in metrics:
+            MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                             y_pred    = y_pred,
                                                             y_true    = y_true,
                                                             display   = display,
                                                             step_size = step_size,
                                                             freq      = freq,
-                                                            ax        = list([axes[0,0],axes[0,1]]))
-                print(f"🔹 {target_cols_name}_{name} (R2_train) : {R2_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (R2_test)  : {R2_SCORE_TEST}")
-                print()                    
+                                                            ax        = list([axes[1,0],axes[1,1]]))
+            print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
+            print()
             
-            # Option 2
-            if "MAE" in metrics:
-                MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = display,
-                                                               step_size = step_size,
-                                                               freq      = freq,
-                                                               ax        = list([axes[1,0],axes[1,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MAE_train) : {MAE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAE_test)  : {MAE_SCORE_TEST}")
-                print()
-              
-            # Option 3
-            if "MSE" in metrics:
-                MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                               y_pred    = y_pred,
-                                                               y_true    = y_true,
-                                                               display   = display,
-                                                               step_size = step_size,
-                                                               freq      = freq,
-                                                               ax        = list([axes[2,0],axes[2,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
-                print()
-              
-            # Option 4
-            if "MSLE" in metrics:
-                MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = display,
-                                                                  step_size = step_size,
-                                                                  freq      = freq,
-                                                                  ax        = list([axes[3,0],axes[3,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
-                print()
-              
-            # Option 5
-            if "MAPE" in metrics:
-                MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                  y_pred    = y_pred,
-                                                                  y_true    = y_true,
-                                                                  display   = display,
-                                                                  step_size = step_size,
-                                                                  freq      = freq,
-                                                                  ax        = list([axes[4,0],axes[4,1]]))
-                print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
-                print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
-                print()
-              
-            # # Option 6
-            # if metrics.get("R2") is not None:
-            #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
-            #                                                 y_pred    = y_pred,
-            #                                                 y_true    = y_true,
-            #                                                 display   = display,
-            #                                                 freq      = freq,
-            #                                                 ax        = list([axes[0,0],axes[0,1]]))
-            #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
-            #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
-            #     print()
-              
-        else:
-            raise ValueError(f"Giá trị method không hợp lệ: {method}")
-
-        if display is True:
-            plt.suptitle(f'Evaluation Model - {name}', fontsize=18)
-            plt.tight_layout(rect=[0, 0, 1, 0.96])
-            plt.show()
-        else:
-            plt.close(fig)
-
+        # Option 3
+        if "MSE" in metrics:
+            MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
+                                                            y_pred    = y_pred,
+                                                            y_true    = y_true,
+                                                            display   = display,
+                                                            step_size = step_size,
+                                                            freq      = freq,
+                                                            ax        = list([axes[2,0],axes[2,1]]))
+            print(f"🔹 {target_cols_name}_{name} (MSE_train) : {MSE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MSE_test)  : {MSE_SCORE_TEST}")
+            print()
+            
+        # Option 4
+        if "MSLE" in metrics:
+            MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_pred,
+                                                                y_true    = y_true,
+                                                                display   = display,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = list([axes[3,0],axes[3,1]]))
+            print(f"🔹 {target_cols_name}_{name} (MSLE_train) : {MSLE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MSLE_test)  : {MSLE_SCORE_TEST}")
+            print()
+            
+        # Option 5
+        if "MAPE" in metrics:
+            MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_pred,
+                                                                y_true    = y_true,
+                                                                display   = display,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = list([axes[4,0],axes[4,1]]))
+            print(f"🔹 {target_cols_name}_{name} (MAPE_train) : {MAPE_SCORE_TRAIN}")
+            print(f"🔹 {target_cols_name}_{name} (MAPE_test)  : {MAPE_SCORE_TEST}")
+            print()
+            
+        # # Option 6
+        # if metrics.get("R2") is not None:
+        #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+        #                                                 y_pred    = y_pred,
+        #                                                 y_true    = y_true,
+        #                                                 display   = display,
+        #                                                 freq      = freq,
+        #                                                 ax        = list([axes[0,0],axes[0,1]]))
+        #     print(f"🔹 {target_cols_name}_{name} (R2_train): {R2_SCORE_TRAIN}")
+        #     print(f"🔹 {target_cols_name}_{name} (R2_test): {R2_SCORE_TEST}")
+        #     print()
+            
     else:
-        raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
-def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, y_true, model, params,
-                                  method     = "short",
-                                  metrics    = list([
-                                                    #  "R2",   
-                                                     "MAE",
-                                                    #  "MSE",
-                                                    #  "MSLE",
-                                                    #  "MAPE"
-                                                     ]),
-                                  display    = False,
-                                  start_time = None,
-                                  end_time   = None,
-                                  step_size  = 24,
-                                  record     = None,
-                                  freq       = None):
+        raise ValueError(f"Giá trị method không hợp lệ: {method}")
+
+    if display is True:
+        plt.suptitle(f'Evaluation Model - {name}', fontsize=18)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.show()
+    else:
+        plt.close(fig)
+
+    # else:
+    #     raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
+def plot_evaluate_params_over_time(
+                                #    data, 
+                                   target_cols_name, station_name, x_fit, y_true, model, params,
+                                   method     = "short",
+                                   metrics    = list([
+                                                     #  "R2",   
+                                                      "MAE",
+                                                     #  "MSE",
+                                                     #  "MSLE",
+                                                     #  "MAPE"
+                                                      ]),
+                                   display    = False,
+                                   start_time = None,
+                                   end_time   = None,
+                                   step_size  = 24,
+                                   record     = None,
+                                   freq       = None):
     import seaborn as sns
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -875,355 +879,355 @@ def plot_evaluate_params_over_time(data, target_cols_name, station_name, x_fit, 
     
     from src.utilities.dataset import HandleMissing_interpolate
     
-    if isinstance(data, pd.DataFrame):
-        name = station_name if station_name else "Unknown"
-        print(f"🔸 Trạm: {name}")
+    # if isinstance(data, pd.DataFrame):
+    name = station_name if station_name else "Unknown"
+    print(f"🔸 Trạm: {name}")
 
-        start_time_ = pd.to_datetime(start_time) if start_time else None
-        end_time_   = pd.to_datetime(end_time)   if end_time else None
-        df_filtered = data.copy()
-        df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
-        df_filtered = df_filtered.dropna(subset=['time'])
+    #     start_time_ = pd.to_datetime(start_time) if start_time else None
+    #     end_time_   = pd.to_datetime(end_time)   if end_time else None
+    #     df_filtered = data.copy()
+    #     df_filtered['time'] = pd.to_datetime(df_filtered['time'], errors='coerce')
+    #     df_filtered = df_filtered.dropna(subset=['time'])
 
-        if start_time_ is not None:
-            df_filtered = df_filtered[df_filtered['time'] >= start_time_]
-        if end_time_ is not None:
-            df_filtered = df_filtered[df_filtered['time'] <= end_time_]
+    #     if start_time_ is not None:
+    #         df_filtered = df_filtered[df_filtered['time'] >= start_time_]
+    #     if end_time_ is not None:
+    #         df_filtered = df_filtered[df_filtered['time'] <= end_time_]
 
-        if freq:
-            df_filtered  = df_filtered.set_index('time')
-            numeric_cols = df_filtered.select_dtypes(include='number').columns
-            df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
-                                                    method = "time").reset_index()
+    #     if freq:
+    #         df_filtered  = df_filtered.set_index('time')
+    #         numeric_cols = df_filtered.select_dtypes(include='number').columns
+    #         df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+    #                                                 method = "time").reset_index()
 
-        df_filtered = df_filtered.set_index('time')
+    #     df_filtered = df_filtered.set_index('time')
 
-        # Set defaul params for model
-        model.set_params(**dict({k : v[0] for k,v in params.items()}))
-        print("default_model: ", model)
-        
-        if method == "short":
-            from scripts.evaluate_model import (My_R2_SCORE,
-                                                My_MAE_SCORE,
-                                                My_MSE_SCORE,
-                                                My_MSLE_SCORE,
-                                                My_MAPE_SCORE)
-            global_d     = dict({})
-            global_total = len(params)
-            global_best  = 0
-            for i, key in enumerate(params.keys(), 1):
-                print(f"Lap: {i}/{global_total}")
-                # Option 1
-                if "R2" in metrics:
-                    local_d = dict({})
-                    for values in params[key]:
-                        local_model = deepcopy(model)
-                        local_model = local_model.set_params(**{key: values})
-                        local_model = local_model.fit(x_fit[0],y_true[0])
-                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                         index   = y_true[0].index, 
-                                                         columns = [y_true[0].name]),
-                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                         index   = y_true[1].index, 
-                                                         columns = [y_true[1].name])])
-                        R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+    # Set defaul params for model
+    model.set_params(**dict({k : v[0] for k,v in params.items()}))
+    print("default_model: ", model)
+    
+    if method == "short":
+        from scripts.evaluate_model import (My_R2_SCORE,
+                                            My_MAE_SCORE,
+                                            My_MSE_SCORE,
+                                            My_MSLE_SCORE,
+                                            My_MAPE_SCORE)
+        global_d     = dict({})
+        global_total = len(params)
+        global_best  = 0
+        for i, key in enumerate(params.keys(), 1):
+            print(f"Lap: {i}/{global_total}")
+            # Option 1
+            if "R2" in metrics:
+                local_d = dict({})
+                for values in params[key]:
+                    local_model = deepcopy(model)
+                    local_model = local_model.set_params(**{key: values})
+                    local_model = local_model.fit(x_fit[0],y_true[0])
+                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                        index   = y_true[0].index, 
+                                                        columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                        index   = y_true[1].index, 
+                                                        columns = [y_true[1].name])])
+                    R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_fit,
+                                                                y_true    = y_true,
+                                                                display   = False,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = None)
+                    print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
+                    print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
+                    local_d[values] = local_d.get(values, 0) + R2_SCORE_TRAIN + R2_SCORE_TEST
+                    print()                    
+                print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
+                return
+            
+            local_total = len(params[key])
+            for j, values in enumerate(params[key], 1):
+                print(f"Turn: {j}/{local_total}")
+                local_model = deepcopy(model)
+                local_model = local_model.set_params(**{key: values})
+                print(local_model)
+                if not ((i==1 and j==1) or (j!=1)):
+                    print("Skip")
+                    continue
+                local_model = local_model.fit(x_fit[0],y_true[0])
+                y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                    index   = y_true[0].index, 
+                                                    columns = [y_true[0].name]),
+                                    pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                    index   = y_true[1].index, 
+                                                    columns = [y_true[1].name])])
+                param_key   = f"{key}_{values}"
+                # Option 2
+                if "MAE" in metrics:
+                    MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
                                                                     y_true    = y_true,
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     freq      = freq,
                                                                     ax        = None)
-                        print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
-                        print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                        local_d[values] = local_d.get(values, 0) + R2_SCORE_TRAIN + R2_SCORE_TEST
-                        print()                    
-                    print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
-                    return
-                
-                local_total = len(params[key])
-                for j, values in enumerate(params[key], 1):
-                    print(f"Turn: {j}/{local_total}")
-                    local_model = deepcopy(model)
-                    local_model = local_model.set_params(**{key: values})
-                    print(local_model)
-                    if not ((i==1 and j==1) or (j!=1)):
-                        print("Skip")
-                        continue
-                    local_model = local_model.fit(x_fit[0],y_true[0])
-                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                     index   = y_true[0].index, 
-                                                     columns = [y_true[0].name]),
-                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                     index   = y_true[1].index, 
-                                                     columns = [y_true[1].name])])
-                    param_key   = f"{key}_{values}"
-                    # Option 2
-                    if "MAE" in metrics:
-                        MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
-                                                                       y_pred    = y_fit,
-                                                                       y_true    = y_true,
-                                                                       display   = False,
-                                                                       step_size = step_size,
-                                                                       freq      = freq,
-                                                                       ax        = None)
-                        # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
-                        print()
+                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    print()
 
-                    # Option 3
-                    if "MSE" in metrics:
-                        MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                                       y_pred    = y_fit,
-                                                                       y_true    = y_true,
-                                                                       display   = False,
-                                                                       step_size = step_size,
-                                                                       freq      = freq,
-                                                                       ax        = None)
-                        # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
-                        print()
-
-                    # Option 4
-                    if "MSLE" in metrics:
-                        MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                          y_pred    = y_fit,
-                                                                          y_true    = y_true,
-                                                                          display   = False,
-                                                                          step_size = step_size,
-                                                                          freq      = freq,
-                                                                          ax        = None)
-                        # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
-                        print()
-
-                    # Option 5
-                    if "MAPE" in metrics:
-                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                          y_pred    = y_fit,
-                                                                          y_true    = y_true,
-                                                                          display   = False,
-                                                                          step_size = step_size,
-                                                                          freq      = freq,
-                                                                          ax        = None)
-                        # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
-                        print()
-            best_param_key = min(global_d, key=global_d.get)
-            if global_d[best_param_key] < global_best:
-                print(global_d)
-                print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
-                if record is not None:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
-                else:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
-            else:
-                print(global_d)
-                print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
-                if record is not None:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
-                else:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
-
-                    # # Option 6
-                    # if metrics.get("R2") is not None:
-                    #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
-                    #                                                 y_pred    = y_fit,
-                    #                                                 y_true    = y_true,
-                    #                                                 display   = False,
-                    #                                                 freq      = freq,
-                    #                                                 ax        = None)
-                    #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
-                    #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                    #     print()
-        elif method == "full":        
-            fig, axes = plt.subplots(6, 2, figsize=(20, 30))
-            
-            from scripts.evaluate_model import (My_R2_SCORE,
-                                                My_MAE_SCORE,
-                                                My_MSE_SCORE,
-                                                My_MSLE_SCORE,
-                                                My_MAPE_SCORE)
-            global_d     = dict({})
-            global_total = len(params)
-            global_best  = 0
-            for i, key in enumerate(params.keys(), 1):
-                print(f"Lap: {i}/{global_total}")
-                # Option 1
-                if "R2" in metrics:
-                    local_d = dict({})
-                    for values in params[key]:
-                        local_model = deepcopy(model)
-                        local_model = local_model.set_params(**{key: values})
-                        local_model = local_model.fit(x_fit[0],y_true[0])
-                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                         index   = y_true[0].index, 
-                                                         columns = [y_true[0].name]),
-                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                        index   = y_true[1].index, 
-                                                        columns = [y_true[1].name])])
-                        R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                # Option 3
+                if "MSE" in metrics:
+                    MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
                                                                     y_true    = y_true,
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     freq      = freq,
-                                                                    ax        = list([axes[0,0],axes[0,1]]))
-                        print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
-                        print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                        local_d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
-                        print()                    
-                    print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
-                    return                       
-                
-                local_total = len(params[key])
-                for j, values in enumerate(params[key], 1):
-                    print(f"Turn: {j}/{local_total}")
-                    local_model = deepcopy(model)
-                    local_model = local_model.set_params(**{key: values})
-                    print(local_model)
-                    local_model = local_model.fit(x_fit[0],y_true[0])
-                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                     index   = y_true[0].index, 
-                                                     columns = [y_true[0].name]),
-                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                     index   = y_true[1].index, 
-                                                     columns = [y_true[1].name])])
-                    param_key   = f"{key}_{values}"
-                    # Option 2
-                    if "MAE" in metrics:
-                        MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
+                                                                    ax        = None)
+                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    print()
+
+                # Option 4
+                if "MSLE" in metrics:
+                    MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
                                                                         y_true    = y_true,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
-                                                                        ax        = list([axes[1,0],axes[1,1]]))
-                        # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
-                        print()
+                                                                        ax        = None)
+                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    print()
 
-                    # Option 3
-                    if "MSE" in metrics:
-                        MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
+                # Option 5
+                if "MAPE" in metrics:
+                    MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
                                                                         y_true    = y_true,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
-                                                                        ax        = list([axes[2,0],axes[2,1]]))
-                        # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
-                        print()
-
-                    # Option 4
-                    if "MSLE" in metrics:
-                        MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
-                                                                            y_pred    = y_fit,
-                                                                            y_true    = y_true,
-                                                                            display   = False,
-                                                                            step_size = step_size,
-                                                                            freq      = freq,
-                                                                            ax        = list([axes[3,0],axes[3,1]]))
-                        # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
-                        print()
-
-                    # Option 5
-                    if "MAPE" in metrics:
-                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
-                                                                            y_pred    = y_fit,
-                                                                            y_true    = y_true,
-                                                                            display   = False,
-                                                                            step_size = step_size,
-                                                                            freq      = freq,
-                                                                            ax        = list([axes[4,0],axes[4,1]]))
-                        # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
-                        # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                        global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
-                        print()
-            best_param_key = min(global_d, key=global_d.get)
-            if global_d[best_param_key] < global_best:
-                print(global_d)
-                print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
-                if record is not None:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
-                else:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+                                                                        ax        = None)
+                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    print()
+        best_param_key = min(global_d, key=global_d.get)
+        if global_d[best_param_key] < global_best:
+            print(global_d)
+            print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+            print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            if record is not None:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
             else:
-                print(global_d)
-                print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
-                print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
-                if record is not None:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
-                else:
-                    print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
-                    print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+        else:
+            print(global_d)
+            print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+            print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            if record is not None:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
+            else:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
 
                 # # Option 6
                 # if metrics.get("R2") is not None:
                 #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                 #                                                 y_pred    = y_fit,
                 #                                                 y_true    = y_true,
-                #                                                 display   = display,
+                #                                                 display   = False,
                 #                                                 freq      = freq,
-                #                                                 ax        = list([axes[0,0],axes[0,1]]))
+                #                                                 ax        = None)
                 #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
                 #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
                 #     print()
-              
-        else:
-            raise ValueError(f"Giá trị method không hợp lệ: {method}")
+    elif method == "full":        
+        fig, axes = plt.subplots(6, 2, figsize=(20, 30))
+        
+        from scripts.evaluate_model import (My_R2_SCORE,
+                                            My_MAE_SCORE,
+                                            My_MSE_SCORE,
+                                            My_MSLE_SCORE,
+                                            My_MAPE_SCORE)
+        global_d     = dict({})
+        global_total = len(params)
+        global_best  = 0
+        for i, key in enumerate(params.keys(), 1):
+            print(f"Lap: {i}/{global_total}")
+            # Option 1
+            if "R2" in metrics:
+                local_d = dict({})
+                for values in params[key]:
+                    local_model = deepcopy(model)
+                    local_model = local_model.set_params(**{key: values})
+                    local_model = local_model.fit(x_fit[0],y_true[0])
+                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                        index   = y_true[0].index, 
+                                                        columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                    index   = y_true[1].index, 
+                                                    columns = [y_true[1].name])])
+                    R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+                                                                y_pred    = y_fit,
+                                                                y_true    = y_true,
+                                                                display   = False,
+                                                                step_size = step_size,
+                                                                freq      = freq,
+                                                                ax        = list([axes[0,0],axes[0,1]]))
+                    print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
+                    print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
+                    local_d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
+                    print()                    
+                print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
+                return                       
+            
+            local_total = len(params[key])
+            for j, values in enumerate(params[key], 1):
+                print(f"Turn: {j}/{local_total}")
+                local_model = deepcopy(model)
+                local_model = local_model.set_params(**{key: values})
+                print(local_model)
+                local_model = local_model.fit(x_fit[0],y_true[0])
+                y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                    index   = y_true[0].index, 
+                                                    columns = [y_true[0].name]),
+                                    pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                    index   = y_true[1].index, 
+                                                    columns = [y_true[1].name])])
+                param_key   = f"{key}_{values}"
+                # Option 2
+                if "MAE" in metrics:
+                    MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    freq      = freq,
+                                                                    ax        = list([axes[1,0],axes[1,1]]))
+                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    print()
 
-        if display is True:
-            plt.suptitle(f'Evaluation Model - {name}', fontsize=18)
-            plt.tight_layout(rect=[0, 0, 1, 0.96])
-            plt.show()
-        else:
-            plt.close(fig)
+                # Option 3
+                if "MSE" in metrics:
+                    MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    freq      = freq,
+                                                                    ax        = list([axes[2,0],axes[2,1]]))
+                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    print()
 
+                # Option 4
+                if "MSLE" in metrics:
+                    MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true,
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        freq      = freq,
+                                                                        ax        = list([axes[3,0],axes[3,1]]))
+                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    print()
+
+                # Option 5
+                if "MAPE" in metrics:
+                    MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true,
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        freq      = freq,
+                                                                        ax        = list([axes[4,0],axes[4,1]]))
+                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
+                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    print()
+        best_param_key = min(global_d, key=global_d.get)
+        if global_d[best_param_key] < global_best:
+            print(global_d)
+            print(f"🌟 Better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+            print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            if record is not None:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+            else:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+        else:
+            print(global_d)
+            print(f"🌟 None better MAE_MSE_MSLE_MAPE's score params have founded!!!")
+            print(f"🌟 NEW Best MAE_MSE_MSLE_MAPE = {best_param_key} (Total = {global_d[best_param_key]})")
+            if record is not None:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {record})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/record):.2%}")
+            else:
+                print(f"🌟 OLD Best MAE_MSE_MSLE_MAPE (Total = {global_best})")
+                print(f"🌟 Improve Ratio = {(1 - global_d[best_param_key]/global_best):.2%}")
+
+            # # Option 6
+            # if metrics.get("R2") is not None:
+            #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
+            #                                                 y_pred    = y_fit,
+            #                                                 y_true    = y_true,
+            #                                                 display   = display,
+            #                                                 freq      = freq,
+            #                                                 ax        = list([axes[0,0],axes[0,1]]))
+            #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
+            #     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
+            #     print()
+            
     else:
-        raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
+        raise ValueError(f"Giá trị method không hợp lệ: {method}")
+
+    if display is True:
+        plt.suptitle(f'Evaluation Model - {name}', fontsize=18)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.show()
+    else:
+        plt.close(fig)
+
+    # else:
+    #     raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
 
 def plot_periodogram(ts, detrend='linear', ax=None, label=None, color=None):
     import pandas as pd

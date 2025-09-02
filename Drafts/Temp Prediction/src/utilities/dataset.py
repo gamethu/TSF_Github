@@ -682,7 +682,7 @@ def handle_feature_outliers_over_time(data, data_cols,
     import os
     from copy import deepcopy
     sys.path.append(os.path.abspath("../src"))
-
+    sys.path.append(os.path.abspath("../../src"))
 
     if isinstance(data, pd.DataFrame):
         name = station_name if station_name else "Unknown"

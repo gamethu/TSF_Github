@@ -32,3 +32,6 @@ graphviz # <~> OUTofDATE <~> use conda instead
 # conda install -c conda-forge graphviz=2.50.0
 
 statsmodels
+
+shap
+# lime
