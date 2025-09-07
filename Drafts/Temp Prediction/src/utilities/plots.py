@@ -972,10 +972,12 @@ def plot_evaluate_params_over_time(
                                                                     ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        # global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        global_best += MAE_SCORE_TEST
                     print()
 
                 # Option 3
@@ -989,10 +991,12 @@ def plot_evaluate_params_over_time(
                                                                     ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        # global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        global_best += MSE_SCORE_TEST
                     print()
 
                 # Option 4
@@ -1006,10 +1010,12 @@ def plot_evaluate_params_over_time(
                                                                         ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        # global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        global_best += MSLE_SCORE_TEST
                     print()
 
                 # Option 5
@@ -1023,10 +1029,12 @@ def plot_evaluate_params_over_time(
                                                                         ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        # global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        global_best += MAPE_SCORE_TEST
                     print()
         best_param_key = min(global_d, key=global_d.get)
         if global_d[best_param_key] < global_best:
@@ -1096,7 +1104,8 @@ def plot_evaluate_params_over_time(
                                                                 ax        = list([axes[0,0],axes[0,1]]))
                     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TRAIN}")
                     print(f"🔹 {target_cols_name}_{name} (R2_{key} = {values} : {R2_SCORE_TEST}")
-                    local_d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
+                    # local_d[values] = R2_SCORE_TRAIN + R2_SCORE_TEST
+                    local_d[values] = R2_SCORE_TRAIN
                     print()                    
                 print(f"🌟 Best R2 for {key} = {max(local_d, key=local_d.get)} (Total R2 = {local_d[max(local_d, key=local_d.get)]})")
                 return                       
@@ -1126,10 +1135,12 @@ def plot_evaluate_params_over_time(
                                                                     ax        = list([axes[1,0],axes[1,1]]))
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        # global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
+                        global_best += MAE_SCORE_TEST
                     print()
 
                 # Option 3
@@ -1143,10 +1154,12 @@ def plot_evaluate_params_over_time(
                                                                     ax        = list([axes[2,0],axes[2,1]]))
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        # global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
+                        global_best += MSE_SCORE_TEST
                     print()
 
                 # Option 4
@@ -1160,10 +1173,12 @@ def plot_evaluate_params_over_time(
                                                                         ax        = list([axes[3,0],axes[3,1]]))
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        # global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
+                        global_best += MSLE_SCORE_TEST
                     print()
 
                 # Option 5
@@ -1177,10 +1192,12 @@ def plot_evaluate_params_over_time(
                                                                         ax        = list([axes[4,0],axes[4,1]]))
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    # global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TEST
                     print(global_d[param_key])
                     if j==1 and i==1:
-                        global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        # global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                        global_best += MAPE_SCORE_TEST
                     print()
         best_param_key = min(global_d, key=global_d.get)
         if global_d[best_param_key] < global_best:

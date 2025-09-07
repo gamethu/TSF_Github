@@ -237,7 +237,7 @@ def HandleMissing_interpolate(data, method):
 
 # Duplicate data
 def ProportionDuplicate_aproach1(data):
-    duplicate_rows = data.duplicated()
+    duplicate_rows   = data.duplicated()
     total_duplicates = duplicate_rows.sum()
 
     if total_duplicates == 0:
@@ -289,11 +289,11 @@ def HandleDuplicate_drop(data, subset, keep):
     data_with_dup_dropped = data.drop_duplicates(subset = subset,
                                                  keep   = keep)
 
-    # original = data.shape[0]
-    # after    = data_with_dup_dropped.shape[0]
+    original = data.shape
+    after    = data_with_dup_dropped.shape
 
-    # print(f"Original Data          : {1:.2%}")
-    # print(f"After remove duplicate : {after/original:.2%}")
+    print(f"Original Data          : {original}")
+    print(f"After remove duplicate : {after}")
     return data_with_dup_dropped
 
 # Mismatch data

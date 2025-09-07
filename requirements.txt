@@ -9,12 +9,13 @@ pandas
 
 scikit-learn
 # cuml-cu12
+tensorflow<2.11
+xgboost
+darts
 
 matplotlib
 seaborn
-xgboost
 statsmodels
-tensorflow<2.11
 keract
 torch 
 torchvision 
@@ -31,7 +32,6 @@ graphviz # <~> OUTofDATE <~> use conda instead
 # conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 # conda install -c conda-forge graphviz=2.50.0
 
-statsmodels
 
 shap
 # lime

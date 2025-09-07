@@ -102,3 +102,7 @@ Drafts/Temp Prediction/models/checkpoints/ML/Random Forest/scaler.pkl
 /Drafts/Temp Prediction/src/utilities/__pycache__
 /Drafts/Temp Prediction/src/models/__pycache__
 /Drafts/Temp Prediction/src/models/__pycache__
+Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/shap_values_fit.pkl
+Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/shap_values_pred.pkl
+Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/scaler.pkl
+Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/~$XGBOOST_Tuning.xlsx
