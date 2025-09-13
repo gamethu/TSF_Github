@@ -4,6 +4,7 @@ ipykernel
 numpy<2
 
 pandas
+openpyxl
 # cudf-cu12 <~> compute capability 7.0+
 # polars
 
