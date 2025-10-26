@@ -107,3 +107,4 @@ Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/shap_values_pred.pkl
 Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/scaler.pkl
 Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/~$XGBOOST_Tuning.xlsx
 Drafts/Temp Prediction/models/LSTMAutoencoders
+*.pkl

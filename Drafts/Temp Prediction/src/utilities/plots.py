@@ -397,18 +397,55 @@ def make_mi_scores(features, target, random_state, type):
     mi_scores = pd.Series(mi_scores, name="MI Scores", index=features.columns)
     mi_scores = mi_scores.sort_values(ascending=False)
     return mi_scores
-def plot_mi_scores(scores, label = None):
-    from matplotlib import pyplot as plt
+def plot_mi_scores(scores, label=None):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     import numpy as np
-    
-    plt.grid(True, axis='x')
+
+    # Sắp xếp tăng dần để vẽ barh (thanh ngang)
     scores = scores.sort_values(ascending=True)
-    width  = np.arange(len(scores))
-    ticks  = list(scores.index)
-    plt.barh(width, scores, label = label)
-    plt.yticks(width, ticks)
-    plt.legend()
-    plt.title("Mutual Information Scores")
+    plt.figure(figsize=(16, 9))
+    plt.grid(False)
+
+    # 🏷️ Tiêu đề
+    plt.title("MỨC ĐỘ TƯƠNG QUAN THEO THÔNG TIN TƯƠNG HỖ",
+              fontweight="bold", va="center", pad=20, fontsize=20)
+
+    # 🎯 Giảm độ dày cột
+    ax = sns.barplot(x=scores.values, y=scores.index, width=0.5, color="#1f77b4", label=label)
+
+    # 📈 Đưa trục X lên trên
+    ax.xaxis.set_ticks_position('top')
+    ax.xaxis.set_label_position('top')
+
+    # 🧭 Nhãn trục
+    # ax.set_xlabel("Giá trị MI (THÔNG TIN TƯƠNG HỖ)", fontweight="bold", fontsize=16)
+    ax.set_ylabel("Đặc trưng", fontweight="bold", fontsize=16)
+
+    # ✂️ Chỉ giữ lại viền trên
+    for spine in ['left', 'right', 'bottom']:
+        ax.spines[spine].set_visible(False)
+    ax.spines['top'].set_visible(True)
+    ax.spines['top'].set_linewidth(1.2)
+
+    # 🧾 Ghi giá trị MI bên phải cột
+    max_val = scores.max()
+    for i, v in enumerate(scores.values):
+        ax.text(
+            x=v + (max_val * 0.02),
+            y=i,
+            s=f"{v:.3f}",
+            ha='left',
+            va='center',
+            fontsize=16
+        )
+
+    # 🔠 Kích thước chữ
+    ax.tick_params(axis='y', labelsize=16)
+    ax.tick_params(axis='x', labelsize=16)
+
+    plt.tight_layout()
+    plt.show()
 
 def evaluate_feature_outliers_over_time(data, data_cols,
                                     station_name      = None,

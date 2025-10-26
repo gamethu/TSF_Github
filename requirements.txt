@@ -13,6 +13,7 @@ scikit-learn
 tensorflow<2.11
 xgboost
 darts
+pytorch-forecasting
 
 matplotlib
 seaborn
@@ -32,7 +33,6 @@ pydot==2.0.0
 graphviz # <~> OUTofDATE <~> use conda instead
 # conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 # conda install -c conda-forge graphviz=2.50.0
-
 
 shap
 # lime
