@@ -6,6 +6,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 from sklearn.metrics import mean_squared_log_error
 from sklearn.metrics import mean_absolute_percentage_error
 
@@ -46,7 +47,8 @@ def plot_CF_aproach2(y_true, y_pred):
     plt.title('Confusion Matrix with Percentage')
     plt.show()
 
-def My_R2_SCORE(y_pred, y_true,
+def My_R2_SCORE(y_pred, y_true, 
+                scaler    = None,
                 data_cols = "Unknown",
                 display   = False, 
                 step_size = 24,
@@ -56,6 +58,28 @@ def My_R2_SCORE(y_pred, y_true,
     y_test_true  = y_true[1]
     y_train_pred = y_pred[0]
     y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
 
     if freq:
         y_train_true = y_train_true.resample(freq).mean().interpolate()
@@ -145,7 +169,7 @@ def My_R2_SCORE(y_pred, y_true,
     
     return train_scores[-1], test_scores[-1]
 
-def My_MAE_SCORE(y_pred, y_true,
+def My_MAE_SCORE(y_pred, y_true, scaler,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
@@ -156,6 +180,28 @@ def My_MAE_SCORE(y_pred, y_true,
     y_test_true  = y_true[1]
     y_train_pred = y_pred[0]
     y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
 
     if freq:
         y_train_true = y_train_true.resample(freq).mean().interpolate()
@@ -246,7 +292,7 @@ def My_MAE_SCORE(y_pred, y_true,
 
     return train_scores[-1], test_scores[-1]
     
-def My_MSE_SCORE(y_pred, y_true,
+def My_MSE_SCORE(y_pred, y_true, scaler,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
@@ -257,6 +303,28 @@ def My_MSE_SCORE(y_pred, y_true,
     y_test_true  = y_true[1]
     y_train_pred = y_pred[0]
     y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
 
     if freq:
         y_train_true = y_train_true.resample(freq).mean().interpolate()
@@ -346,7 +414,129 @@ def My_MSE_SCORE(y_pred, y_true,
 
     return train_scores[-1], test_scores[-1]
 
-def My_MSLE_SCORE(y_pred, y_true,
+def My_RMSE_SCORE(y_pred, y_true, scaler,
+                 data_cols = "Unknown",
+                 display   = False, 
+                 step_size = 24,
+                 freq      = None,
+                 ax        = None):
+
+    y_train_true = y_true[0]
+    y_test_true  = y_true[1]
+    y_train_pred = y_pred[0]
+    y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
+
+    if freq:
+        y_train_true = y_train_true.resample(freq).mean().interpolate()
+        y_train_pred = y_train_pred.resample(freq).mean().interpolate()
+        y_test_true  = y_test_true.resample(freq).mean().interpolate()
+        y_test_pred  = y_test_pred.resample(freq).mean().interpolate()
+
+    n_train = len(y_train_true)
+    n_test = len(y_test_true)
+
+    if n_train < n_test:
+        print("y_train phải lớn hơn y_test")
+        return
+
+    step_size = step_size
+    if n_test < step_size:
+        ws_test   = np.unique([int(i * n_test / 5) for i in range(1, 6) if int(i * n_test / 5) > 0])
+        step_size = ws_test[1] - ws_test[0]
+        ws_train  = np.concatenate([np.arange(n_test, n_train, step_size), [n_train]])
+    else: 
+        ws_test  = np.concatenate([np.arange(1, n_test, step_size), [n_test]])
+        ws_train = np.concatenate([np.arange(n_test, n_train, step_size), [n_train]])
+    window_sizes = np.unique(np.concatenate([ws_test, ws_train]).astype(int))
+
+    train_scores, test_scores, idx = [], [], []
+
+    # window_train_true = y_train_true.rolling(window=step_size).mean().dropna()
+    # window_train_pred = y_train_pred.rolling(window=step_size).mean().dropna()
+    # window_test_true = y_test_true.rolling(window=step_size).mean().dropna()
+    # window_test_pred = y_test_pred.rolling(window=step_size).mean().dropna()
+
+    for w in window_sizes:
+        # Đảm bảo không vượt giới hạn
+        if w > len(y_train_true) or w > len(y_train_pred):
+            break
+
+        rmse_train = root_mean_squared_error(y_train_true[:w], y_train_pred[:w])
+        train_scores.append(rmse_train)
+
+        if w <= len(y_test_true):
+            rmse_test = root_mean_squared_error(y_test_true[:w], y_test_pred[:w])
+        else:
+            rmse_test = test_scores[-1] if test_scores else rmse_train  # fallback nếu trống
+
+        test_scores.append(rmse_test)
+
+        if w - 1 < len(y_train_true.index):
+            idx.append(y_train_true.index[w - 1])
+
+    if display is True:
+        # Vẽ biểu đồ
+        ax[0].plot(idx, train_scores, 
+                   linestyle = '-', 
+                   linewidth = 3, 
+                   color     = "blue", 
+                   label     = "Training RMSE")
+        ax[0].plot(idx, test_scores, 
+                   linestyle = '-', 
+                   linewidth = 3, 
+                   color     = "orange", 
+                   label     = "Test RMSE")
+        ax[0].set_title(f"Mean Squared Error - {data_cols}")
+        ax[0].set_xlabel("Date")
+        ax[0].set_ylabel("RMSE SCORE")
+        ax[0].grid(True)
+        ax[0].legend()
+        # Barplot số outlier theo năm
+        bar_width = 0.5
+        idx_series = pd.to_datetime(idx)
+        years = idx_series.to_series().resample('Y').mean().interpolate().dt.year
+        train_scores_yearly = pd.Series(train_scores, index=idx_series).resample('Y').mean().interpolate()
+        test_scores_yearly  = pd.Series(test_scores, index=idx_series).resample('Y').mean().interpolate()
+
+        ax[1].bar(years, train_scores_yearly,
+                  width = bar_width,
+                  label = "Training RMSE")
+        ax[1].bar(years, -test_scores_yearly, 
+                  width = bar_width,
+                  label = "Test RMSE")
+        ax[1].set_title(f"Mean Squared Error - {data_cols}")
+        ax[1].set_xlabel("Year")
+        ax[1].set_ylabel("RMSE SCORE")
+        ax[1].set_xticks(years)
+        ax[1].tick_params(axis='x', rotation=45)
+        ax[1].grid(True, which='both', linestyle='--', linewidth=0.5)
+        ax[1].legend()
+
+    return train_scores[-1], test_scores[-1]
+
+def My_MSLE_SCORE(y_pred, y_true, scaler,
                   data_cols = "Unknown",
                   display   = False, 
                   step_size = 24,
@@ -357,6 +547,28 @@ def My_MSLE_SCORE(y_pred, y_true,
     y_test_true  = y_true[1]
     y_train_pred = y_pred[0]
     y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
 
     if freq:
         y_train_true = y_train_true.resample(freq).mean().interpolate()
@@ -446,7 +658,7 @@ def My_MSLE_SCORE(y_pred, y_true,
 
     return train_scores[-1], test_scores[-1]
     
-def My_MAPE_SCORE(y_pred, y_true,
+def My_MAPE_SCORE(y_pred, y_true, scaler,
                   data_cols = "Unknown",
                   display   = False, 
                   step_size = 24,
@@ -456,6 +668,28 @@ def My_MAPE_SCORE(y_pred, y_true,
     y_test_true  = y_true[1]
     y_train_pred = y_pred[0]
     y_test_pred  = y_pred[1]
+
+    if scaler:
+        y_train_true = pd.DataFrame(
+            scaler.inverse_transform(y_train_true.values.reshape(-1, 1)),
+            index=y_train_true.index,
+            columns=["target"]
+        )
+        y_test_true = pd.DataFrame(
+            scaler.inverse_transform(y_test_true.values.reshape(-1, 1)),
+            index=y_test_true.index,
+            columns=["target"]
+        )
+        y_train_pred = pd.DataFrame(
+            scaler.inverse_transform(y_train_pred.values.reshape(-1, 1)),
+            index=y_train_pred.index,
+            columns=["target"]
+        )
+        y_test_pred = pd.DataFrame(
+            scaler.inverse_transform(y_test_pred.values.reshape(-1, 1)),
+            index=y_test_pred.index,
+            columns=["target"]
+        )
 
     if freq:
         y_train_true = y_train_true.resample(freq).mean().interpolate()

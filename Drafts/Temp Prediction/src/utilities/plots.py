@@ -888,7 +888,7 @@ def plot_evaluate_model_over_time(
     #     raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
 def plot_evaluate_params_over_time(
                                 #    data, 
-                                   target_cols_name, station_name, x_fit, y_true, model, params,
+                                   target_cols_name, station_name, x_fit, y_true, model, params, scaler,
                                    method     = "short",
                                    metrics    = list([
                                                      #  "R2",   
@@ -947,6 +947,7 @@ def plot_evaluate_params_over_time(
         from scripts.evaluate_model import (My_R2_SCORE,
                                             My_MAE_SCORE,
                                             My_MSE_SCORE,
+                                            My_RMSE_SCORE,
                                             My_MSLE_SCORE,
                                             My_MAPE_SCORE)
         global_d     = dict({})
@@ -992,11 +993,11 @@ def plot_evaluate_params_over_time(
                     continue
                 local_model = local_model.fit(x_fit[0],y_true[0])
                 y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                    index   = y_true[0].index, 
-                                                    columns = [y_true[0].name]),
+                                                 index   = y_true[0].index, 
+                                                 columns = [y_true[0].name]),
                                     pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                    index   = y_true[1].index, 
-                                                    columns = [y_true[1].name])])
+                                                 index   = y_true[1].index, 
+                                                 columns = [y_true[1].name])])
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
@@ -1005,6 +1006,7 @@ def plot_evaluate_params_over_time(
                                                                     y_true    = y_true,
                                                                     display   = False,
                                                                     step_size = step_size,
+                                                                    scaler    = scaler,
                                                                     freq      = freq,
                                                                     ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
@@ -1024,6 +1026,7 @@ def plot_evaluate_params_over_time(
                                                                     y_true    = y_true,
                                                                     display   = False,
                                                                     step_size = step_size,
+                                                                    scaler    = scaler,
                                                                     freq      = freq,
                                                                     ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
@@ -1036,6 +1039,26 @@ def plot_evaluate_params_over_time(
                         global_best += MSE_SCORE_TEST
                     print()
 
+                # Option 3.2
+                if "RMSE" in metrics:
+                    RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    scaler    = scaler,
+                                                                    freq      = freq,
+                                                                    ax        = None)
+                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TEST}")
+                    # global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        # global_best += RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
+                        global_best += RMSE_SCORE_TEST
+                    print()
+
                 # Option 4
                 if "MSLE" in metrics:
                     MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
@@ -1043,6 +1066,7 @@ def plot_evaluate_params_over_time(
                                                                         y_true    = y_true,
                                                                         display   = False,
                                                                         step_size = step_size,
+                                                                        scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
@@ -1062,6 +1086,7 @@ def plot_evaluate_params_over_time(
                                                                         y_true    = y_true,
                                                                         display   = False,
                                                                         step_size = step_size,
+                                                                        scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
@@ -1112,6 +1137,7 @@ def plot_evaluate_params_over_time(
         from scripts.evaluate_model import (My_R2_SCORE,
                                             My_MAE_SCORE,
                                             My_MSE_SCORE,
+                                            My_RMSE_SCORE,
                                             My_MSLE_SCORE,
                                             My_MAPE_SCORE)
         global_d     = dict({})
@@ -1197,6 +1223,25 @@ def plot_evaluate_params_over_time(
                     if j==1 and i==1:
                         # global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
                         global_best += MSE_SCORE_TEST
+                    print()
+                    
+                # Option 3.2
+                if "RMSE" in metrics:
+                    RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    freq      = freq,
+                                                                    ax        = list([axes[2,0],axes[2,1]]))
+                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TRAIN}")
+                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TEST}")
+                    # global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
+                    global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TEST
+                    print(global_d[param_key])
+                    if j==1 and i==1:
+                        # global_best += RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
+                        global_best += RMSE_SCORE_TEST
                     print()
 
                 # Option 4
