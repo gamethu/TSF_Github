@@ -888,7 +888,8 @@ def plot_evaluate_model_over_time(
     #     raise ValueError("Tham số 'data' hiện tại chỉ hỗ trợ 1 DataFrame.")
 def plot_evaluate_params_over_time(
                                 #    data, 
-                                   target_cols_name, station_name, x_fit, y_true, model, params, scaler,
+                                   target_cols_name, station_name, x_fit, y_true, model, params, 
+                                   scaler     = None,
                                    method     = "short",
                                    metrics    = list([
                                                      #  "R2",   

@@ -108,3 +108,4 @@ Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/scaler.pkl
 Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/~$XGBOOST_Tuning.xlsx
 Drafts/Temp Prediction/models/LSTMAutoencoders
 *.pkl
+/Drafts/Temp Prediction/notebooks/3.2. DL_model/lightning_logs

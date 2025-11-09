@@ -169,7 +169,8 @@ def My_R2_SCORE(y_pred, y_true,
     
     return train_scores[-1], test_scores[-1]
 
-def My_MAE_SCORE(y_pred, y_true, scaler,
+def My_MAE_SCORE(y_pred, y_true, 
+                 scaler    = None,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
@@ -292,7 +293,8 @@ def My_MAE_SCORE(y_pred, y_true, scaler,
 
     return train_scores[-1], test_scores[-1]
     
-def My_MSE_SCORE(y_pred, y_true, scaler,
+def My_MSE_SCORE(y_pred, y_true, 
+                 scaler    = None,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
@@ -414,7 +416,8 @@ def My_MSE_SCORE(y_pred, y_true, scaler,
 
     return train_scores[-1], test_scores[-1]
 
-def My_RMSE_SCORE(y_pred, y_true, scaler,
+def My_RMSE_SCORE(y_pred, y_true, 
+                 scaler    = None,
                  data_cols = "Unknown",
                  display   = False, 
                  step_size = 24,
@@ -536,7 +539,8 @@ def My_RMSE_SCORE(y_pred, y_true, scaler,
 
     return train_scores[-1], test_scores[-1]
 
-def My_MSLE_SCORE(y_pred, y_true, scaler,
+def My_MSLE_SCORE(y_pred, y_true, 
+                  scaler    = None,
                   data_cols = "Unknown",
                   display   = False, 
                   step_size = 24,
@@ -658,7 +662,8 @@ def My_MSLE_SCORE(y_pred, y_true, scaler,
 
     return train_scores[-1], test_scores[-1]
     
-def My_MAPE_SCORE(y_pred, y_true, scaler,
+def My_MAPE_SCORE(y_pred, y_true, 
+                  scaler    = None,
                   data_cols = "Unknown",
                   display   = False, 
                   step_size = 24,
