@@ -1702,8 +1702,7 @@ def trend(data,
     import seaborn as sns
     from warnings import simplefilter
     import matplotlib.pyplot as plt
-    from statsmodels.tsa.seasonal import seasonal_decompose
-    
+
     simplefilter("ignore")  # ignore warnings to clean up output cells
     # Set Matplotlib defaults
     sns.set_theme(style="whitegrid")  # tương đương seaborn-whitegrid
@@ -1728,11 +1727,23 @@ def trend(data,
     y_pred, y_fore = trend_forecast(data, data_cols)
 
     if display is True:
-        for i, model in enumerate(["additive", "multiplicative"]):            
-            result = seasonal_decompose(data[data_cols], model=model, period=period)            
-            ax[i].set_title("Decomposition for " + model + " model - " + data_cols)
-            ax[i].plot(result.seasonal, 'green', label='Seasonality')
-            ax[i].legend()
+        data[data_cols].plot(style=".", color="0.5", ax=ax[0])
+        ma.plot(linewidth= 3, 
+                title    = f"{data_cols} - {period}-Day Moving Average",
+                label    = f"{period}-Day MA",
+                ax       = ax[0],
+                color    = "red")
+        ax[0].legend()
+        
+        data[data_cols].plot(style=".", color="0.5", title=f"{data_cols} - Linear Trend", ax=ax[1])
+        y_pred.plot(ax=ax[1], linewidth=3, label="Trend",color="red")
+        ax[1].legend()
+        
+        data[data_cols].plot(ax=ax[2], title=f"{data_cols} - Linear Trend Forecast", **plot_params)
+        y_pred.plot(ax=ax[2], linewidth=3, label="Trend")
+        y_fore.plot(ax=ax[2], linewidth=3, label="Trend Forecast", color="C3")
+        ax[2].legend()
+
 def residuals(data,
               data_cols,
               display   = False,
@@ -1759,28 +1770,6 @@ def correlation_analysis(data,
         # acf, pacf
         plot_acf(data[data_cols], lags=period, ax=ax[0])
         plot_pacf(data[data_cols], lags=period, ax=ax[1])
-def mutual_information(data,
-                       data_cols = None,
-                       display   = False,
-                       period    = None,
-                       ax        = None):
-    import sys
-    sys.path.append("../")  # đường dẫn đến thư mục chứa src
-
-    from src.utilities import(config, 
-                              dataset, 
-                              features, 
-                              plots)
-    
-    PROJ_SEED = config.getSeed()
-    mi_scores = make_mi_scores(features     = data, 
-                                    target       = data[data_cols],
-                                    type         = "regression",
-                                    random_state = PROJ_SEED)
-
-    print(mi_scores)
-    if display is True:
-        plot_mi_scores(mi_scores)
 
 def ts_analysis(data,
                 data_cols = None,
@@ -1869,9 +1858,1827 @@ def ts_analysis(data,
             # Option 5
 
             # Option 6
+
+def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
+                                      feature_name = None,
+                                      unit         = "°C",
+                                      display      = False,
+                                      ax           = None):
+    import geopandas as gpd
+    import matplotlib.pyplot as plt
+    # Tạo GeoDataFrame và gán region trong một bước
+    gdf_points = gpd.GeoDataFrame(data     = data,
+                                  geometry = gpd.points_from_xy(x = data["LONGITUDE"], 
+                                                                y = data["LATITUDE"]),
+                                  crs      = "EPSG:4326")
+    gdf_points = gdf_points.assign(region=lambda df: df["NAME"].map({"NOI BAI"   : "Đồng bằng sông Hồng",
+                                                                     "THANH HOA" : "Bắc Trung Bộ",
+                                                                     "DONG HOI"  : "Bắc Trung Bộ",
+                                                                     "QUY NHON"  : "Duyên hải Nam Trung Bộ",
+                                                                     "TSN"       : "Đông Nam Bộ",
+                                                                     "CA MAU"    : "Đồng bằng sông Cửu Long"}))
+    # Mapping tỉnh -> vùng
+    df_provinces["region"] = df_provinces["ten_tinh"].map({
+        **dict.fromkeys(["Hà Nội", "Hải Phòng", "Bắc Ninh", "Hưng Yên", "Quảng Ninh", "Ninh Bình"], 
+                         "Đồng bằng sông Hồng"),
+        **dict.fromkeys(["Thanh Hóa", "Nghệ An", "Hà Tĩnh", "Quảng Trị", "Huế"], 
+                         "Bắc Trung Bộ"),
+        **dict.fromkeys(["Đà Nẵng", "Quảng Ngãi", "Gia Lai", "Khánh Hoà", "Lâm Đồng", "Đắk Lắk"], 
+                         "Duyên hải Nam Trung Bộ"),
+        **dict.fromkeys(["TP. Hồ Chí Minh", "Đồng Nai", "Tây Ninh"], 
+                         "Đông Nam Bộ"),
+        **dict.fromkeys(["Cần Thơ", "An Giang", "Cà Mau", "Đồng Tháp", "Vĩnh Long"], 
+                         "Đồng bằng sông Cửu Long")})
+    
+    fig, ax = plt.subplots(figsize=(9, 8))
+    # Vẽ tỉnh và vùng
+    df_provinces.plot(ax        = ax, 
+                      color     = "lightgrey", 
+                      edgecolor = "black")
+    df_provinces.dissolve(by      = "region", 
+                          aggfunc = "first")
+    df_provinces = df_provinces.join(gdf_points.groupby("region", observed=True)[data_cols].mean(), on="region")
+    df_provinces.plot(ax        = ax,
+                      column    = data_cols,
+                      cmap      = "coolwarm",
+                      edgecolor = "black",
+                      linewidth = 1,
+                      legend    = True,
+                      alpha     = 0.7)
+    
+    cbar_ax = ax.get_figure().axes[-1]  
+    cbar_ax.tick_params(labelsize=12)
+
+    # Vẽ trạm và nhãn 
+    for station in gdf_points["NAME"].unique():
+        # Lấy dữ liệu trạm và tính trung bình trong cùng vòng lặp
+        station_point = gdf_points[gdf_points["NAME"] == station].iloc[0]
+        temp_avg      = gdf_points[gdf_points["NAME"] == station][data_cols].mean()
+        
+        # Vẽ điểm trạm
+        ax.scatter(x         = station_point.LONGITUDE, 
+                   y         = station_point.LATITUDE, 
+                   color     = "green", 
+                   s         = 100, 
+                   edgecolor = "black")
+        
+        # Vẽ nhãn
+        ax.text(x        = station_point.LONGITUDE + 0.3, 
+                y        = station_point.LATITUDE,
+                s        = f"{station}: ({temp_avg:.4f}{unit})",
+                fontsize = 12,
+                ha       = "left",
+                va       = "bottom",
+                bbox     = dict(facecolor="white", alpha=0.7, edgecolor="none", pad=1))
+        
+    if display is True:
+        ax.set_title(f"Ảnh hưởng của vĩ độ đến {feature_name} tại các trạm khí tượng",
+                     fontsize=12, loc="center")
+        ax.set_xlabel("Kinh độ", fontsize=12)
+        ax.set_ylabel("Vĩ độ", fontsize=12)
+        ax.tick_params(axis="both", which="major", labelsize=12)
+        ax.plot()
+
+def plot_influence_of_latitude_in_features(data, df_provinces,
+                                           method       = "short",
+                                           features     = list(["Nina_index",
+                                                               # "DEW_ave",
+                                                               # "TEMP_ave",
+                                                               # "RH_ave",
+                                                               # "DEW_max",
+                                                               # "RH_max",
+                                                               # "sp_ave",
+                                                               # "tcc_ave",
+                                                               # "tp_sum",
+                                                               # "wind_speed_ave",
+                                                               # "wind_direction_deg_ave",
+                                                               # "TEMP_max"
+                                                               ]),
+                                           display      = False,
+                                           start_time   = None, 
+                                           end_time     = None,
+                                           freq         = None):
+    import os
+    import sys
+    import pandas as pd  
+    import matplotlib.pyplot as plt  
+    
+    sys.path.append(os.path.abspath("../src"))    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
+    start_time = pd.to_datetime(start_time)
+    end_time   = pd.to_datetime(end_time)
+    df_filtered = data.copy()
+    if start_time:
+        df_filtered = df_filtered[df_filtered.index >= start_time]
+    if end_time:
+        df_filtered = df_filtered[df_filtered.index <= end_time]
+    if freq:        
+        # Chỉ giữ các cột số
+        numeric_cols = df_filtered.select_dtypes(include='number').columns
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
+        
+    if method == "short":
+        # Option 1
+        if "TEMP_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "TEMP_ave",
+                                              feature_name = "nhiệt độ trung bình",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )
             
+        # Option 2
+        if "TEMP_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "TEMP_max",
+                                              feature_name = "nhiệt độ cực đại",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )
+            
+        # Option 3
+        if "Nina_index" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "Nina_index",
+                                              feature_name = "Nina_index",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )
 
+        # Option 4
+        if "DEW_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "DEW_ave",
+                                              feature_name = "điểm sương trung bình",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )  
+        # Option 5
+        if "RH_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "RH_ave",
+                                              feature_name = "độ ẩm trung bình",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )  
+        # Option 6
+        if "DEW_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "DEW_max",
+                                              feature_name = "điểm sương cực đại",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )
 
-
+        # Option 7
+        if "RH_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "RH_max",
+                                              feature_name = "độ ẩm cực đại",
+                                              unit         = "°C",
+                                              display      = False,
+                                              # ax           = None
+                                              )
         
+        # Option 8
+        if "sp_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "sp_ave",
+                                              feature_name = "áp suất bề mặt trung bình",
+                                              unit         = "kPa",
+                                              display      = False,
+                                              # ax           = None
+                                              )
+            
+        # Option 9
+        if "tcc_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "tcc_ave",
+                                              feature_name = "lượng mây che phủ trung bình",
+                                              unit         = "%",
+                                              display      = False,
+                                              # ax           = None
+                                              )
         
+        # Option 10
+        if "tp_sum" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "tp_sum",
+                                              feature_name = "lượng mưa tích lũy",
+                                              unit         = "mm",
+                                              display      = False,
+                                              # ax           = None
+                                              )
+        
+        # Option 11
+        if "wind_speed_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "wind_speed_ave",
+                                              feature_name = "tốc độ gió trung bình",
+                                              unit         = "m/s",
+                                              display      = False,
+                                              # ax           = None
+                                              )
+        
+        # Option 12
+        if "wind_direction_deg_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "wind_direction_deg_ave",
+                                              feature_name = "hướng gió trung bình",
+                                              unit         = "°",
+                                              display      = False,
+                                              # ax           = None
+                                              )
+        
+    elif method == "full":
+        # Option 1
+        if "TEMP_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "TEMP_ave",
+                                              feature_name = "nhiệt độ trung bình",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                              )
+
+        # Option 2
+        if "TEMP_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "TEMP_max",
+                                              feature_name = "nhiệt độ cực đại",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )     
+
+        # Option 3
+        if "DEW_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "DEW_ave",
+                                              feature_name = "điểm sương trung bình",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                            )  
+
+        # Option 4
+        if "DEW_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "DEW_max",
+                                              feature_name = "điểm sương cực đại",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )
+
+        # Option 5
+        if "RH_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "RH_ave",
+                                              feature_name = "độ ẩm tương đối trung bình",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                            )  
+
+        # Option 6
+        if "RH_max" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "RH_max",
+                                              feature_name = "độ ẩm tương đối cực đại",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )
+
+        # Option 7
+        if "Nina_index" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "Nina_index",
+                                              feature_name = "Nina_index",
+                                              unit         = "°C",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                              )
+
+        # Option 8
+        if "sp_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "sp_ave",
+                                              feature_name = "áp suất bề mặt trung bình",
+                                              unit         = "kPa",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )
+
+        # Option 9
+        if "tcc_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "tcc_ave",
+                                              feature_name = "lượng mây che phủ trung bình",
+                                              unit         = "%",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                              )
+
+        # Option 10
+        if "tp_sum" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "tp_sum",
+                                              feature_name = "lượng mưa tích lũy",
+                                              unit         = "mm",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )
+
+        # Option 11
+        if "wind_speed_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "wind_speed_ave",
+                                              feature_name = "tốc độ gió trung bình",
+                                              unit         = "m/s",
+                                              display      = display,
+                                            #   ax           = axes[0]
+                                              )
+
+        # Option 12
+        if "wind_direction_deg_ave" in features:
+            plot_influence_of_latitude_in_col(data         = df_filtered,
+                                              df_provinces = df_provinces,
+                                              data_cols    = "wind_direction_deg_ave",
+                                              feature_name = "hướng gió trung bình",
+                                              unit         = "°",
+                                              display      = display,
+                                            #   ax           = axes[1]
+                                              )          
+
+def plot_correlation_matrix_in_station(data, data_cols,
+                                       feature_name = None,
+                                       display      = False,
+                                       ax           = None):
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    correlation_matrix = data.pivot_table(index="time", columns="NAME", values=data_cols).corr(method="pearson")
+    # Thứ tự cột/hàng bạn muốn
+    cols_pos = ["NOI BAI", "THANH HOA", "DONG HOI", "QUY NHON", "TSN", "CA MAU"]
+
+    # Reorder cả index và columns
+    correlation_matrix = correlation_matrix.reindex(index   = cols_pos, 
+                                                    columns = cols_pos)
+    if display is True:
+        fig, ax = plt.subplots(figsize=(9, 10))
+        sns.heatmap(data     = correlation_matrix, 
+                    annot    = True,
+                    square   = True, 
+                    cmap     = "Blues", 
+                    fmt      = ".2f",
+                    cbar_kws = {"shrink": 0.7},)
+        plt.title(f'Tương quan {feature_name} giữa các trạm khí tượng')
+        plt.xlabel("Trạm khí tượng")
+        plt.ylabel("Trạm khí tượng")
+        plt.show()
+
+def plot_correlation_matrix_in_stations(data, 
+                                        method       = "short",
+                                        features     = list(["Nina_index",
+                                                            # "DEW_ave",
+                                                            # "TEMP_ave",
+                                                            # "RH_ave",
+                                                            # "DEW_max",
+                                                            # "RH_max",
+                                                            # "sp_ave",
+                                                            # "tcc_ave",
+                                                            # "tp_sum",
+                                                            # "wind_speed_ave",
+                                                            # "wind_direction_deg_ave",
+                                                            # "TEMP_max"
+                                                            ]),
+                                        display      = False,
+                                        start_time   = None, 
+                                        end_time     = None,
+                                        freq         = None):
+    import os
+    import sys
+    import pandas as pd    
+    
+    sys.path.append(os.path.abspath("../src"))    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
+    start_time = pd.to_datetime(start_time)
+    end_time   = pd.to_datetime(end_time)
+    df_filtered = data.copy()
+    if start_time:
+        df_filtered = df_filtered[df_filtered.index >= start_time]
+    if end_time:
+        df_filtered = df_filtered[df_filtered.index <= end_time]
+    if freq:        
+        # Chỉ giữ các cột số
+        numeric_cols = df_filtered.select_dtypes(include='number').columns
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
+        
+    if method == "short":
+        # Option 1
+        if "TEMP_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "TEMP_ave",
+                                               feature_name = "nhiệt độ trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+            
+        # Option 2
+        if "TEMP_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "TEMP_max",
+                                               feature_name = "nhiệt độ cực đại",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+            
+        # Option 3
+        if "Nina_index" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "Nina_index",
+                                               feature_name = "Nina_index",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+
+        # Option 4
+        if "DEW_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "DEW_ave",
+                                               feature_name = "điểm sương trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )  
+        # Option 5
+        if "RH_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "RH_ave",
+                                               feature_name = "độ ẩm tương đối trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )  
+        # Option 6
+        if "DEW_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "DEW_max",
+                                               feature_name = "điểm sương cực đại",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+
+        # Option 7
+        if "RH_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "RH_max",
+                                               feature_name = "độ ẩm tương đối cực đại",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+        
+        # Option 8
+        if "sp_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "sp_ave",
+                                               feature_name = "áp suất bề mặt trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+            
+        # Option 9
+        if "tcc_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "tcc_ave",
+                                               feature_name = "lượng mây che phủ trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+        
+        # Option 10
+        if "tp_sum" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "tp_sum",
+                                               feature_name = "lượng mưa tích lũy",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+        
+        # Option 11
+        if "wind_speed_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "wind_speed_ave",
+                                               feature_name = "tốc độ gió trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+        
+        # Option 12
+        if "wind_direction_deg_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "wind_direction_deg_ave",
+                                               feature_name = "hướng gió trung bình",
+                                               display      = False,
+                                               # ax           = None
+                                               )
+        
+    elif method == "full":        
+        # fig, axes = plt.subplots(6, 2, figsize=(40, 80))            
+        # Option 1
+        if "TEMP_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "TEMP_ave",
+                                               feature_name = "nhiệt độ trung bình",
+                                               display      = display,
+                                               # ax           = axes[1,0]
+                                               )
+            
+        # Option 2
+        if "TEMP_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "TEMP_max",
+                                               feature_name = "nhiệt độ cực đại",
+                                               display      = display,
+                                               # ax           = axes[5,1]
+                                               )
+            
+        # Option 3
+        if "Nina_index" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "Nina_index",
+                                               feature_name = "Nina_index",
+                                               display      = display,
+                                               # ax           = axes[0,0]
+                                               )
+
+        # Option 4
+        if "DEW_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "DEW_ave",
+                                               feature_name = "điểm sương trung bình",
+                                               display      = display,
+                                               # ax           = axes[0,1]
+                                               )  
+        # Option 5
+        if "RH_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "RH_ave",
+                                               feature_name = "độ ẩm tương đối trung bình",
+                                               display      = display,
+                                               # ax           = axes[1,1]
+                                               )  
+        # Option 6
+        if "DEW_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "DEW_max",
+                                               feature_name = "điểm sương cực đại",
+                                               display      = display,
+                                               # ax           = axes[2,0]
+                                               )
+
+        # Option 7
+        if "RH_max" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "RH_max",
+                                               feature_name = "độ ẩm tương đối cực đại",
+                                               display      = display,
+                                               # ax           = axes[2,1]
+                                               )
+        
+        # Option 8
+        if "sp_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "sp_ave",
+                                               feature_name = "áp suất bề mặt trung bình",
+                                               display      = display,
+                                               # ax           = axes[3,0]
+                                               )
+            
+        # Option 9
+        if "tcc_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "tcc_ave",
+                                               feature_name = "lượng mây che phủ trung bình",
+                                               display      = display,
+                                               # ax           = axes[3,1]
+                                               )
+        
+        # Option 10
+        if "tp_sum" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "tp_sum",
+                                               feature_name = "lượng mưa tích lũy",
+                                               display      = display,
+                                               # ax           = axes[4,0]
+                                               )
+        
+        # Option 11
+        if "wind_speed_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "wind_speed_ave",
+                                               feature_name = "tốc độ gió trung bình",
+                                               display      = display,
+                                               # ax           = axes[4,1]
+                                               )
+        
+        # Option 12
+        if "wind_direction_deg_ave" in features:
+            plot_correlation_matrix_in_station(data         = df_filtered,
+                                               data_cols    = "wind_direction_deg_ave",
+                                               feature_name = "hướng gió trung bình",
+                                               display      = display,
+                                               # ax           = axes[5,0]
+                                               )
+
+def plot_trend_of_year_of_target(data, station, station_name,
+                                 display = False,
+                                 ax      = None):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Lọc dữ liệu cho trạm Nội Bài
+    station_data = data[data["NAME"] == station].copy()
+
+    # Tính giá trị trung bình theo năm để giảm nhiễu
+    yearly_data = station_data.groupby("YEAR").agg({"TEMP_ave": "mean",
+                                                    "TEMP_max": "mean"
+                                                    }).reset_index()
+
+    # Tính giá trị trung bình toàn thời kỳ
+    mean_Tave = yearly_data["TEMP_ave"].mean()
+    mean_Tmax = yearly_data["TEMP_max"].mean()
+
+    # Tính đường xu hướng tuyến tính
+    z_Tave = np.polyfit(x   = yearly_data["YEAR"], 
+                        y   = yearly_data["TEMP_ave"], 
+                        deg = 1)
+    p_Tave = np.poly1d(z_Tave)
+
+    z_Tmax = np.polyfit(x   = yearly_data["YEAR"], 
+                        y   = yearly_data["TEMP_max"], 
+                        deg = 1)
+    p_Tmax = np.poly1d(z_Tmax)
+
+    if display is True:
+        plt.figure(figsize=(14, 8))
+
+        # Vẽ đường nhiệt độ và điểm dữ liệu
+        plt.plot(yearly_data["YEAR"], 
+                 yearly_data["TEMP_max"], 
+                 marker = "o", 
+                 color  = "steelblue", 
+                 label  = "Trung bình nhiệt độ cực đại trong ngày (°C)")
+        
+        plt.plot(yearly_data["YEAR"], 
+                 yearly_data["TEMP_ave"], 
+                 marker = "o", 
+                 color  = "darkgreen", 
+                 label  = "Trung bình nhiệt độ trung bình trong ngày (°C)")
+
+        # Vẽ đường xu hướng tuyến tính
+        plt.plot(yearly_data["YEAR"], 
+                 p_Tmax(yearly_data["YEAR"]), 
+                 color     = "purple", 
+                 linewidth = 2, 
+                 label     = "Xu hướng tuyến tính")
+        
+        plt.plot(yearly_data["YEAR"], 
+                 p_Tave(yearly_data["YEAR"]), 
+                 color     = "purple", 
+                 linewidth = 2)
+
+        # Vẽ đường trung bình toàn thời kỳ
+        plt.axhline(mean_Tmax, 
+                    color     = "gray", 
+                    linestyle = "--", 
+                    label     = "Trung bình nhiệt độ 1990-2024")
+        
+        plt.axhline(mean_Tave, 
+                    color     = "gray", 
+                    linestyle = "--")
+
+        plt.title(f"BIẾN ĐỘNG THEO NĂM CỦA ĐẶC TRƯNG NHIỆT ĐỘ \nTẠI TRẠM KHÍ TƯỢNG {station_name}", 
+                    fontsize = 12, 
+                    weight   = "bold")
+        plt.xlabel("Năm")
+        plt.ylabel("Nhiệt độ (°C)")
+        plt.xticks(yearly_data["YEAR"][::2], rotation=45)
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.200), ncol=2)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.grid(True, linestyle="--", alpha=0.5)
+        plt.show()
+
+    return yearly_data
+
+def plot_trend_of_year_of_features(data, station, station_name,
+                                   display = False,
+                                   ax      = None):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Lọc dữ liệu cho trạm Nội Bài và tính trung bình theo năm
+    station_data = data[data["NAME"] == station].copy()
+    yearly_data = station_data.groupby("YEAR").agg({"Nina_index": "mean",
+                                                    "DEW_ave": "mean",
+                                                    "RH_ave": "mean", 
+                                                    "DEW_max": "mean",
+                                                    "RH_max": "mean",
+                                                    "sp_ave": "mean",
+                                                    "tcc_ave": "mean",
+                                                    "tp_sum": "mean",
+                                                    "wind_speed_ave": "mean",
+                                                    "wind_direction_deg_ave": "mean"
+                                                    }).reset_index()
+
+    if display is True:
+        # Tạo subplot với nhiều trục y
+        fig, ax1 = plt.subplots(figsize=(14, 8))
+
+        # Trục trái: Nhiệt độ điểm sương và độ ẩm (°C và %)
+        ax1.plot(yearly_data["YEAR"], 
+                 yearly_data["DEW_ave"], 
+                 color       = "red", 
+                 marker      = "^", 
+                 linewidth   = 2, 
+                 label       = "Điểm sương trung bình", 
+                 markersize  = 4)
+
+        ax1.plot(yearly_data["YEAR"], 
+                 yearly_data["DEW_max"], 
+                 color      = "darkred", 
+                 marker     = "v", 
+                 linewidth  = 2, 
+                 label      = "Điểm sương cực đại", 
+                 markersize = 4)
+
+        ax1.plot(yearly_data["YEAR"], 
+                 yearly_data["RH_ave"], 
+                 color      = "blue", 
+                 marker     = "s", 
+                 linewidth  = 2, 
+                 label      = "Độ ẩm tương đối trung bình", 
+                 markersize = 4)
+        
+        ax1.plot(yearly_data["YEAR"], 
+                 yearly_data["RH_max"], 
+                 color      = "darkblue", 
+                 marker     = "D", 
+                 linewidth  = 2, 
+                 label      = "Độ ẩm tương đối cực đại", 
+                 markersize = 4)
+
+        ax1.set_xlabel("Năm", fontsize=12)
+        ax1.set_ylabel("Điểm sương (°C) / Độ ẩm (%)", fontsize=12, color="black")
+        ax1.tick_params(axis="y", labelcolor="black")
+
+        # Trục phải 1: Áp suất và Nina index
+        ax2 = ax1.twinx()
+        ax2.plot(yearly_data["YEAR"], 
+                 yearly_data["Nina_index"], 
+                 color      = "purple", 
+                 marker     = "o", 
+                 linewidth  = 2, 
+                 label      = "Nina index", 
+                 markersize = 4)
+        
+        ax2.plot(yearly_data["YEAR"], 
+                 yearly_data["sp_ave"], 
+                 color      = "green", 
+                 marker     = "*", 
+                 linewidth  = 2, 
+                 label      = "Áp suất bề mặt", 
+                 markersize = 5)
+        
+        ax2.set_ylabel("Nina index / Áp suất (kPa)", fontsize=12, color="black")
+        ax2.tick_params(axis="y", labelcolor="black")
+
+        # Trục phải 2: Các yếu tố khí tượng khác
+        ax3 = ax1.twinx()
+        ax3.spines['right'].set_position(('outward', 60))
+        ax3.plot(yearly_data["YEAR"], 
+                 yearly_data["tcc_ave"], 
+                 color      = "gray", 
+                 marker     = "h", 
+                 linewidth  = 2, 
+                 label      = "Độ che phủ mây", 
+                 markersize = 4)
+
+        ax3.plot(yearly_data["YEAR"], 
+                 yearly_data["tp_sum"], 
+                 color      = "cyan", 
+                 marker     = "p", 
+                 linewidth  = 2, 
+                 label      = "Lượng mưa", 
+                 markersize = 4)
+        
+        ax3.plot(yearly_data["YEAR"], 
+                 yearly_data["wind_speed_ave"], 
+                 color      = "orange", 
+                 marker     = "x", 
+                 linewidth  = 2, 
+                 label      = "Tốc độ gió", 
+                 markersize = 5)
+
+        ax3.set_ylabel("Mây (%) / Mưa (mm) / Gió (m/s)", fontsize=12, color="black")
+        ax3.tick_params(axis="y", labelcolor="black")
+
+        # Trục phải 3: Hướng gió
+        ax4 = ax1.twinx()
+        ax4.spines['right'].set_position(('outward', 120))
+        ax4.plot(yearly_data["YEAR"], 
+                 yearly_data["wind_direction_deg_ave"], 
+                 color      = "pink", 
+                 marker     = "^", 
+                 linewidth  = 2, 
+                 label      = "Hướng gió trung bình", 
+                 markersize = 4)
+        
+        ax4.set_ylabel("Hướng gió (độ)", fontsize=12, color="black")
+        ax4.tick_params(axis="y", labelcolor="black")
+
+        # Hiển thị năm cách 2 năm một lần và xoay 45 độ
+        plt.xticks(yearly_data["YEAR"][::2], rotation=45)
+
+        # Gộp legend từ tất cả các trục và đặt dưới xlabel
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        lines3, labels3 = ax3.get_legend_handles_labels()
+        lines4, labels4 = ax4.get_legend_handles_labels()
+        ax1.legend(lines1 
+                   + lines2 
+                   + lines3
+                   + lines4
+                   , 
+                   labels1 
+                   + labels2 
+                   + labels3
+                   + labels4
+                   , 
+                   loc='upper center', bbox_to_anchor=(0.5, -0.10), 
+                   ncol=4, fontsize=10, frameon=False)
+
+        # Tiêu đề
+        plt.title( "BIẾN ĐỘNG CÁC ĐẶC TRƯNG ẢNH HƯỞNG ĐẾN NHIỆT ĐỘ CỰC ĐẠI \n"
+                  f"TẠI TRẠM KHÍ TƯỢNG {station_name} (1990 - 2024)", 
+                  fontsize=14, fontweight="bold", pad=20)
+        plt.tight_layout()
+        plt.subplots_adjust(bottom=0.2)
+        plt.show()
+
+    return yearly_data
+
+def plot_trend_of_year_of_all_data(data, 
+                                   method       = "full",
+                                   stations     = list(["NOI BAI",
+                                                        # "THANH HOA",
+                                                        # "DONG HOI",
+                                                        # "QUY NHON",
+                                                        # "TSN",
+                                                        # "CA MAU"
+                                                        ]),
+                                   display      = True,
+                                   start_time   = None, 
+                                   end_time     = None,
+                                   freq         = None):
+    import os
+    import sys
+    import pandas as pd    
+    import matplotlib.pyplot as plt
+    
+    sys.path.append(os.path.abspath("../src"))    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
+    start_time = pd.to_datetime(start_time)
+    end_time   = pd.to_datetime(end_time)
+    df_filtered = data.copy()
+    if start_time:
+        df_filtered = df_filtered[df_filtered.index >= start_time]
+    if end_time:
+        df_filtered = df_filtered[df_filtered.index <= end_time]
+    if freq:        
+        # Chỉ giữ các cột số
+        numeric_cols = df_filtered.select_dtypes(include='number').columns
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
+        
+    if method == "short":
+        # Option 1
+        if "NOI BAI" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "NOI BAI",
+                                                              station_name = "NỘI BÀI",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "NOI BAI",
+                                                                  station_name = "NỘI BÀI",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm NỘI BÀI 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+
+        # Option 2
+        if "THANH HOA" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "THANH HOA",
+                                                              station_name = "THANH HÓA",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "THANH HOA",
+                                                                  station_name = "THANH HÓA",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm THANH HÓA 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+
+        # Option 3
+        if "DONG HOI" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "DONG HOI",
+                                                              station_name = "ĐỒNG HỚI",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "DONG HOI",
+                                                                  station_name = "ĐỒNG HỚI",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm ĐỒNG HỚI 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+
+        # Option 4
+        if "QUY NHON" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "QUY NHON",
+                                                              station_name = "QUY NHƠN",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "QUY NHON",
+                                                                  station_name = "QUY NHƠN",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm QUY NHƠN 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+
+        # Option 5
+        if "TSN" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "TSN",
+                                                              station_name = "TÂN SƠN NHẤT",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "TSN",
+                                                                  station_name = "TÂN SƠN NHẤT",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm TÂN SƠN NHẤT 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+            
+        # Option 6
+        if "CA MAU" in stations:
+            yearly_data_target = plot_trend_of_year_of_target(data         = df_filtered,
+                                                              station      = "CA MAU",
+                                                              station_name = "CÀ MAU",
+                                                              display      = False,
+                                                              # ax           = None
+                                                              )
+            yearly_data_features = plot_trend_of_year_of_features(data         = df_filtered,
+                                                                  station      = "CA MAU",
+                                                                  station_name = "CÀ MAU",
+                                                                  display      = False,
+                                                                  # ax           = None
+                                                                  )
+            print("🔶🔶🔶 Trạm CÀ MAU 🔶🔶🔶")
+            print(f"""Xu hướng biến đổi theo năm của nhiệt độ\n{yearly_data_target}
+                                                             \n{yearly_data_target.describe()}\n""")
+            print(f"""Xu hướng biến đổi theo năm của các đặc trưng\n{yearly_data_features}
+                                                                  \n{yearly_data_features.describe()}\n""")
+
+    elif method == "full":
+        # fig, axes = plt.subplots(6, 2, figsize=(40, 80))
+        # Option 1
+        if "NOI BAI" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "NOI BAI",
+                                         station_name = "NỘI BÀI",
+                                         display      = display,
+                                         # ax           = axes[1,0]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "NOI BAI",
+                                           station_name = "NỘI BÀI",
+                                           display      = display,
+                                           # ax           = axes[1,0]
+                                           )
+            
+        # Option 2
+        if "THANH HOA" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "THANH HOA",
+                                         station_name = "THANH HÓA",
+                                         display      = display,
+                                         # ax           = axes[5,1]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "THANH HOA",
+                                           station_name = "THANH HÓA",
+                                           display      = display,
+                                           # ax           = axes[5,1]
+                                           )
+            
+        # Option 3
+        if "DONG HOI" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "DONG HOI",
+                                         station_name = "ĐỒNG HỚI",
+                                         display      = display,
+                                         # ax           = axes[0,0]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "DONG HOI",
+                                           station_name = "ĐỒNG HỚI",
+                                           display      = display,
+                                           # ax           = axes[0,0]
+                                           )
+
+        # Option 4
+        if "QUY NHON" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "QUY NHON",
+                                         station_name = "QUY NHƠN",
+                                         display      = display,
+                                         # ax           = axes[0,1]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "QUY NHON",
+                                           station_name = "QUY NHƠN",
+                                           display      = display,
+                                           # ax           = axes[0,1]
+                                           )   
+             
+        # Option 5
+        if "TSN" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "TSN",
+                                         station_name = "TÂN SƠN NHẤT",
+                                         display      = display,
+                                         # ax           = axes[1,1]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "TSN",
+                                           station_name = "TÂN SƠN NHẤT",
+                                           display      = display,
+                                           # ax           = axes[1,1]
+                                           )  
+              
+        # Option 6
+        if "CA MAU" in stations:
+            plot_trend_of_year_of_target(data         = df_filtered,
+                                         station      = "CA MAU",
+                                         station_name = "CÀ MAU",
+                                         display      = display,
+                                         # ax           = axes[2,0]
+                                         )
+            plot_trend_of_year_of_features(data         = df_filtered,
+                                           station      = "CA MAU",
+                                           station_name = "CÀ MAU",
+                                           display      = display,
+                                           # ax           = axes[2,0]
+                                           )
+
+def plot_trend_of_month_of_targets(data, station, station_name,
+                                   display = False,
+                                   ax      = None):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns    
+    
+    # Lấy dữ liệu trạm
+    station_data = data[data["NAME"] == station].copy()
+    
+    # Resample theo tháng cho 2 target nhiệt độ
+    monthly_features = station_data.resample("M").agg({"TEMP_ave": "mean",
+                                                       "TEMP_max": "mean"})
+
+    # Thêm cột năm và tháng
+    monthly_features["Year"]  = monthly_features.index.year
+    monthly_features["Month"] = monthly_features.index.month
+
+    # Xác định giai đoạn
+    def get_period(year):
+        if 1990 <= year <= 2000:
+            return "1990-2000"
+        elif 2001 <= year <= 2010:
+            return "2001-2010"
+        elif 2011 <= year <= 2016:
+            return "2011-2016"
+        elif 2017 <= year <= 2024:
+            return "2017-2024"
+        else:
+            return
+
+    monthly_features["Period"] = monthly_features["Year"].apply(get_period)
+    
+    # Vẽ heatmap cho TEMP_ave (target)
+    pivot_ave = monthly_features.groupby(["Period", "Month"])["TEMP_ave"].mean().unstack()
+    # Thêm dòng tổng 1990-2024
+    pivot_ave_all = pd.DataFrame(pivot_ave)
+    pivot_ave_all.loc["1990-2024"] = monthly_features.groupby("Month")["TEMP_ave"].mean().values
+    # Sắp xếp lại thứ tự giai đoạn
+    order = ["1990-2024", "1990-2000", "2001-2010", "2011-2016", "2017-2024"]
+    pivot_ave_all = pivot_ave_all.reindex(order)
+
+    # Vẽ heatmap cho TEMP_max (target)
+    pivot_max = monthly_features.groupby(["Period", "Month"])["TEMP_max"].mean().unstack()    
+    # Thêm dòng tổng 1990-2024
+    pivot_max_all = pd.DataFrame(pivot_max)
+    pivot_max_all.loc["1990-2024"] = monthly_features.groupby("Month")["TEMP_max"].mean().values    
+    # Sắp xếp lại thứ tự giai đoạn
+    pivot_max_all = pivot_max_all.reindex(order)
+
+    if display is True:
+        fig, axes = plt.subplots(figsize=(14, 8))
+        sns.heatmap(data     = pivot_ave_all, 
+                    annot    = True,
+                    square   = True, 
+                    fmt      = ".1f", 
+                    cmap     = "coolwarm", 
+                    cbar_kws = {"label"  : "Nhiệt độ (°C)",
+                                "shrink" : 0.5},
+                    ax       = axes)
+        
+        axes.set_title(f"GIÁ TRỊ TRUNG BÌNH THÁNG\nCỦA NHIỆT ĐỘ TRUNG BÌNH TRONG NGÀY\nTẠI TRẠM KHÍ TƯỢNG {station_name}",
+                         fontsize=14, fontweight='bold')
+        axes.set_xlabel("Tháng")
+        axes.set_ylabel("Giai đoạn")
+        axes.tick_params(axis='y', rotation=0)
+        
+        fig, axes = plt.subplots(figsize=(14, 8))
+        sns.heatmap(data     = pivot_max_all, 
+                    annot    = True, 
+                    square   = True, 
+                    fmt      = ".1f", 
+                    cmap     = "coolwarm", 
+                    cbar_kws = {"label"  : "Nhiệt độ (°C)",
+                                "shrink" : 0.5},
+                    ax       = axes)
+
+        axes.set_title(f"GIÁ TRỊ TRUNG BÌNH THÁNG\nCỦA NHIỆT ĐỘ CỰC ĐẠI TRONG NGÀY\nTẠI TRẠM KHÍ TƯỢNG {station_name}",
+                         fontsize=14, fontweight='bold')
+        axes.set_xlabel("Tháng")
+        axes.set_ylabel("Giai đoạn")
+        axes.tick_params(axis='y', rotation=0)
+        
+        plt.tight_layout()
+        plt.show()
+
+    return pivot_ave_all, pivot_max_all
+
+def plot_trend_of_month_of_features(data, station, station_name,
+                                    display = False,
+                                    ax      = None):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns    
+    
+    # Lấy dữ liệu trạm
+    station_data = data[data["NAME"] == station].copy()
+    
+    # Resample theo tháng cho features
+    monthly_features = station_data.resample("M").agg({
+        "DEW_ave": "mean",
+        "DEW_max": "mean",
+        "RH_ave": "mean",
+        "RH_max": "mean",
+        "Nina_index": "mean",
+        "sp_ave": "mean",
+        "tcc_ave": "mean",
+        "tp_sum": "sum",
+        "wind_speed_ave": "mean",
+        "wind_direction_deg_ave": "mean"
+    })
+
+    # Thêm cột năm và tháng
+    monthly_features["Year"]  = monthly_features.index.year
+    monthly_features["Month"] = monthly_features.index.month
+
+    # Xác định giai đoạn
+    def get_period(year):
+        if 1990 <= year <= 2000:
+            return "1990-2000"
+        elif 2001 <= year <= 2010:
+            return "2001-2010"
+        elif 2011 <= year <= 2016:
+            return "2011-2016"
+        elif 2017 <= year <= 2024:
+            return "2017-2024"
+        else:
+            return
+
+    monthly_features["Period"] = monthly_features["Year"].apply(get_period)
+
+    # Danh sách features và thông tin hiển thị
+    features_info = {
+        "DEW_ave": {"label": "Điểm sương trung bình", "unit": "°C"},
+        "DEW_max": {"label": "Điểm sương cực đại", "unit": "°C"},
+        "RH_ave": {"label": "Độ ẩm tương đối trung bình", "unit": "%"},
+        "RH_max": {"label": "Độ ẩm tương đối cực đại", "unit": "%"},
+        "Nina_index": {"label": "Nina index", "unit": ""},
+        "sp_ave": {"label": "Áp suất bề mặt trung bình", "unit": "kPa"},
+        "tcc_ave": {"label": "Độ che phủ mây trung bình", "unit": "%"},
+        "tp_sum": {"label": "Lượng mưa tích lũy", "unit": "mm"},
+        "wind_speed_ave": {"label": "Tốc độ gió trung bình", "unit": "m/s"},
+        "wind_direction_deg_ave": {"label": "Hướng gió trung bình", "unit": "°"}
+    }
+    
+    periods = ["1990-2000", "2001-2010", "2011-2016", "2017-2024"]
+    colors  = ['blue', 'red', 'green', 'orange']
+    markers = ['o', 's', '^', 'D']
+    results = []
+        
+    if display is True:
+        # Tạo subplot cho tất cả features
+        fig, axes = plt.subplots(5, 2, figsize=(20, 25))
+        axes = axes.flatten()
+        
+    for idx, (feature, info) in enumerate(features_info.items()):
+        if display is True:
+            ax = axes[idx]
+        
+        for period, color, marker in zip(periods, colors, markers):
+            period_data = monthly_features[monthly_features["Period"] == period]
+            if not period_data.empty:
+                monthly_avg = period_data.groupby("Month")[feature].mean()
+                results.append(monthly_avg.rename(feature + "_" + period))
+                if display is True:
+                    ax.plot(monthly_avg.index, monthly_avg.values, 
+                            marker=marker, color=color, linestyle='-', 
+                            label=period, linewidth=2, markersize=6)
+        if display is True:
+            ax.set_xlabel("Tháng", fontsize=12)
+            ax.set_ylabel(f"{info['label']} ({info['unit']})", fontsize=12)
+            ax.set_title(f"Giá trị của {info['label']} tại trạm khí tượng {station_name}", fontsize=14, fontweight='bold')
+            ax.grid(True, alpha=0.3)
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            ax.set_xticks(range(1, 13))        
+    if display is True:
+        plt.tight_layout()
+        plt.show()
+
+    return pd.DataFrame(results)
+
+def plot_trend_of_month_of_all_data(data, 
+                                    method       = "full",
+                                    stations     = list(["NOI BAI",
+                                                         # "THANH HOA",
+                                                         # "DONG HOI",
+                                                         # "QUY NHON",
+                                                         # "TSN",
+                                                         # "CA MAU"
+                                                         ]),
+                                    display      = True,
+                                    start_time   = None, 
+                                    end_time     = None,
+                                    freq         = None):
+    import os
+    import sys
+    import pandas as pd    
+    import matplotlib.pyplot as plt
+    
+    sys.path.append(os.path.abspath("../src"))    
+    from src.utilities.dataset import HandleMissing_interpolate
+    
+    start_time = pd.to_datetime(start_time)
+    end_time   = pd.to_datetime(end_time)
+    df_filtered = data.copy()
+    if start_time:
+        df_filtered = df_filtered[df_filtered.index >= start_time]
+    if end_time:
+        df_filtered = df_filtered[df_filtered.index <= end_time]
+    if freq:        
+        # Chỉ giữ các cột số
+        numeric_cols = df_filtered.select_dtypes(include='number').columns
+        df_filtered = HandleMissing_interpolate(data   = df_filtered[numeric_cols].resample(freq).mean(),
+                                                method = "time")
+        
+    if method == "short":            
+        # Option 1
+        if "NOI BAI" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "NOI BAI",
+                                                                                          station_name = "NỘI BÀI",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "NOI BAI",
+                                                                    station_name = "NỘI BÀI",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm NỘI BÀI 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")
+
+        # Option 2
+        if "THANH HOA" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "THANH HOA",
+                                                                                          station_name = "THANH HÓA",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "THANH HOA",
+                                                                    station_name = "THANH HÓA",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm THANH HÓA 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")
+            
+        # Option 3
+        if "DONG HOI" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "DONG HOI",
+                                                                                          station_name = "ĐỒNG HỚI",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "DONG HOI",
+                                                                    station_name = "ĐỒNG HỚI",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm ĐỒNG HỚI 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")
+
+        # Option 4
+        if "QUY NHON" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "QUY NHON",
+                                                                                          station_name = "QUY NHƠN",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "QUY NHON",
+                                                                    station_name = "QUY NHƠN",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm QUY NHƠN 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")   
+             
+        # Option 5
+        if "TSN" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "TSN",
+                                                                                          station_name = "TÂN SƠN NHẤT",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "TSN",
+                                                                    station_name = "TÂN SƠN NHẤT",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm TÂN SƠN NHẤT 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")  
+              
+        # Option 6
+        if "CA MAU" in stations:
+            monthly_data_temp_ave, monthly_data_temp_max = plot_trend_of_month_of_targets(data         = df_filtered,
+                                                                                          station      = "CA MAU",
+                                                                                          station_name = "CÀ MAU",
+                                                                                          display      = False,
+                                                                                          # ax           = None
+                                                                                          )
+            monthly_data_features = plot_trend_of_month_of_features(data         = df_filtered,
+                                                                    station      = "CA MAU",
+                                                                    station_name = "CÀ MAU",
+                                                                    display      = False,
+                                                                    # ax           = None
+                                                                    )
+            print("🔶🔶🔶 Trạm CÀ MAU 🔶🔶🔶")
+            print(f"""Giá trị trung bình tháng của nhiệt độ trung bình\n{monthly_data_temp_ave}
+                                                                      \n{monthly_data_temp_ave.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của nhiệt độ cực đại\n{monthly_data_temp_max}
+                                                                      \n{monthly_data_temp_max.describe()}\n""")
+            print(f"""Giá trị trung bình tháng của các đặc trưng\n{monthly_data_features}
+                                                                \n{monthly_data_features.describe()}\n""")
+         
+    elif method == "full":        
+        # fig, axes = plt.subplots(6, 2, figsize=(40, 80))            
+        # Option 1
+        if "NOI BAI" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "NOI BAI",
+                                           station_name = "NỘI BÀI",
+                                           display      = display,
+                                           # ax           = axes[1,0]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "NOI BAI",
+                                            station_name = "NỘI BÀI",
+                                            display      = display,
+                                            # ax           = axes[1,0]
+                                            )
+            
+        # Option 2
+        if "THANH HOA" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "THANH HOA",
+                                           station_name = "THANH HÓA",
+                                           display      = display,
+                                           # ax           = axes[5,1]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "THANH HOA",
+                                            station_name = "THANH HÓA",
+                                            display      = display,
+                                            # ax           = axes[5,1]
+                                            )
+            
+        # Option 3
+        if "DONG HOI" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "DONG HOI",
+                                           station_name = "ĐỒNG HỚI",
+                                           display      = display,
+                                           # ax           = axes[0,0]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "DONG HOI",
+                                            station_name = "ĐỒNG HỚI",
+                                            display      = display,
+                                            # ax           = axes[0,0]
+                                            )
+
+        # Option 4
+        if "QUY NHON" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "QUY NHON",
+                                           station_name = "QUY NHƠN",
+                                           display      = display,
+                                           # ax           = axes[0,1]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "QUY NHON",
+                                            station_name = "QUY NHƠN",
+                                            display      = display,
+                                            # ax           = axes[0,1]
+                                            )   
+             
+        # Option 5
+        if "TSN" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "TSN",
+                                           station_name = "TÂN SƠN NHẤT",
+                                           display      = display,
+                                           # ax           = axes[1,1]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "TSN",
+                                            station_name = "TÂN SƠN NHẤT",
+                                            display      = display,
+                                            # ax           = axes[1,1]
+                                            )  
+              
+        # Option 6
+        if "CA MAU" in stations:
+            plot_trend_of_month_of_targets(data         = df_filtered,
+                                           station      = "CA MAU",
+                                           station_name = "CÀ MAU",
+                                           display      = display,
+                                           # ax           = axes[2,0]
+                                           )
+            plot_trend_of_month_of_features(data         = df_filtered,
+                                            station      = "CA MAU",
+                                            station_name = "CÀ MAU",
+                                            display      = display,
+                                            # ax           = axes[2,0]
+                                            )
+
+def actual_vs_predict_line_plot(station, target, y_train_encoded, station_fit, scaler_y,
+                                set_name = None):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import tensorflow as tf
+
+    for name in station.keys():
+        plt.figure(figsize=(15, 5))
+        # true_fit
+        sns.lineplot(x     = station_fit[name].index,
+                     y     = scaler_y[name].inverse_transform(y_train_encoded[name][[target]]).ravel(),
+                     color = 'blue',
+                     label = 'Actual',
+                     #  ax    = axes[i],
+                     linewidth=1.5)
+        # fit
+        sns.lineplot(x     = station_fit[name].index,
+                     y     = tf.squeeze(scaler_y[name].inverse_transform(station_fit[name])),
+                     color = 'orange',
+                     label = 'Predict',
+                     #  ax    = axes[i],
+                     linewidth=1.5,
+                     alpha=0.8)
+        plt.title(f"{set_name} Set: Actual vs Predict - {name}", fontsize=14, fontweight='bold')
+        plt.grid()
+        plt.tight_layout()
+        plt.show()
+
+def actual_vs_predict_scatter_plot(station, src_name, target, y_train_encoded, station_fit, scaler_y,
+                                   set_name = None):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import tensorflow as tf
+    import numpy as np
+
+    num_cols = len(station_fit.keys())
+
+    # Xác định số hàng và số cột hợp lý
+    ncols = 2  # Số biểu đồ trên mỗi hàng
+    nrows = int(np.ceil(num_cols / ncols))  # Tính số hàng cần thiết
+
+    fig, ax = plt.subplots(ncols              = ncols, 
+                           nrows              = nrows, 
+                           figsize            = (5*ncols, 4*nrows),
+                           constrained_layout = True)  # auto căn chỉnh
+    ax = ax.flatten()  # chuyển mảng 2 chiều thành 1 chiều để dễ duyệt
+    count = list(["a", "b", "c", "d", "e", "f"])
+    for i, name in enumerate(station.keys(), 0):
+        # fit
+        sns.scatterplot(x  = scaler_y[name].inverse_transform(y_train_encoded[name][[target]]).ravel(),
+                        y  = tf.squeeze(scaler_y[name].inverse_transform(station_fit[name])),
+                        ax = ax[i])
+        ax[i].set_xlabel("Thực tế")
+        ax[i].set_ylabel("Dự đoán")
+        # true_fit
+        ax[i].plot(scaler_y[name].inverse_transform(y_train_encoded[name][[target]]),
+                   scaler_y[name].inverse_transform(y_train_encoded[name][[target]]),
+                   "r--")
+        ax[i].set_title(f"({count[i]}) {src_name[name]}")
+        plt.suptitle(f"""So sánh giá trị thực tế và giá trị dự đoán nhiệt độ cực đại\ntại các trạm trên tập {set_name}""", 
+                     fontsize   = 15, 
+                     fontweight = 'bold', 
+                     ha         = 'center')
+    plt.show()
+
+def plot_metric_panel(stations, station_names, metric,
+                      color   = None,
+                      label   = None,
+                      display = False,
+                      ax      = None):
+        import numpy as np
+        
+        x = np.arange(len(stations))
+        if display is True:
+            ax.plot(x, metric, marker='o', color=color, label=label, linewidth=1.8)
+            ax.set_xticks(x)
+            ax.set_xticklabels([station_names.get(s, s) for s in stations])
+            ax.set_xlabel('Trạm khí tượng')            
+
+            if label == 'R2':
+                ax.set_ylabel('R2 (%)')
+                ax.set_title(f'(a) Hệ số xác định R2')    
+            else:
+                ax.set_ylabel('Chỉ số lỗi')
+                ax.set_title(f'(b) Chỉ số lỗi')
+            ax.legend()
+            ax.grid(axis='both', linestyle='--')
+
+def plot_metrics_in_all_station(station, station_names, metrics_dict,
+                                datasets     = dict({
+                                                    # 'train': 'huấn luyện',
+                                                    # 'valid': 'xác thực',
+                                                    # 'test' : 'kiểm tra'
+                                                    }),                        
+                                metric_names = list([
+                                                    #   'R2', 
+                                                    #   'MAE', 
+                                                    #   'MSE', 
+                                                    #   'MSLE', 
+                                                    #   'MAPE'
+                                                    ]),
+                                display  = True):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    for ds, info in datasets.items():
+        fig, ax = plt.subplots(2, 2, figsize=(15, 10))
+        stations = list(station.keys())
+        if "R2" in metric_names:
+            plot_metric_panel(stations      = stations,
+                              station_names = station_names,
+                              metric        = [float(metrics_dict.get("R2", {}).get(ds, {}).get(s, np.nan) * 100.0) for s in stations],
+                              color         = '#1f77b4',
+                              label         = 'R2',
+                              display       = display,
+                              ax            = ax[0][0])
+
+        if "MAE" in metric_names:
+            plot_metric_panel(stations      = stations,
+                              station_names = station_names,
+                              metric        = [metrics_dict.get("MAE", {}).get(ds, {}).get(s, np.nan) for s in stations],
+                              color         = "#d62728",
+                              label         = 'MAE',
+                              display       = display,
+                              ax            = ax[0][1])
+        if "MSE" in metric_names:
+            plot_metric_panel(stations      = stations,
+                              station_names = station_names,
+                              metric        = [metrics_dict.get("MSE", {}).get(ds, {}).get(s, np.nan) for s in stations],
+                              color         = '#1f77b4',
+                              label         = 'MSE',
+                              display       = display,
+                              ax            = ax[0][1])
+
+        if "MSLE" in metric_names:
+            plot_metric_panel(stations      = stations,
+                              station_names = station_names,
+                              metric        = [metrics_dict.get("MSLE", {}).get(ds, {}).get(s, np.nan) for s in stations],
+                              color         = '#ff7f0e',
+                              label         = 'MSLE',
+                              display       = display,
+                              ax            = ax[1][0])
+
+        if "MAPE" in metric_names:
+            plot_metric_panel(stations      = stations,
+                              station_names = station_names,
+                              metric        = [metrics_dict.get("MAPE", {}).get(ds, {}).get(s, np.nan) for s in stations],
+                              color         = '#2ca02c',
+                              label         = 'MAPE',
+                              display       = display,
+                              ax            = ax[1][1])
+
+            fig.suptitle(f'Các chỉ số đánh giá mô hình trên tập {info}', 
+                         fontsize   = 15, 
+                         fontweight = 'bold',
+                         ha         = 'center')
+            plt.tight_layout()
+            plt.show()
+            
+                
+def shap_summary_plot(station, src_name, shap_vals, features_to_plot, feature_col,
+                      set_name,
+                      col_width ,
+                      row_height,
+                      ncols     ):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import shap
+
+    # Tính layout
+    num_cols   = len(station.keys())
+    nrows      = int(np.ceil(num_cols / ncols))
+
+    fig, ax = plt.subplots(nrows   = nrows, 
+                           ncols   = ncols, 
+                           figsize = (col_width * ncols, row_height * nrows), 
+                           squeeze = False)
+    ax = ax.flatten() # chuyển mảng 2 chiều thành 1 chiều để dễ duyệt
+
+    for i, name in enumerate(station.keys()):
+        plt.sca(ax[i])
+        count = list(["a", "b", "c", "d", "e", "f"])
+        shap.summary_plot(shap_vals[name],
+                          features      = features_to_plot[name][feature_col],
+                          feature_names = features_to_plot[name][feature_col].columns,
+                          show          = False,
+                          plot_size     = (col_width, row_height))
+
+        ax[i].set_title(f"({count[i]}) {src_name[name]}")
+        ax[i].tick_params(axis='both', which='both')
+
+    plt.suptitle(f"SHAP Summary tại các trạm khí tượng trên tập {set_name}",
+                 fontsize   = 15, 
+                 fontweight = 'bold', 
+                 ha         = 'center')
+    plt.tight_layout()
+    plt.show()
+
+def comparasion_model(station, station_names, metrics_dict, 
+                      datasets     = None,                        
+                      metric_names = None,
+                      ncols        = 2):
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    x = np.arange(len(station))
+    x_labels = [station_names.get(s, s) for s in station]
+    
+    marker_list = ['o', 's', '^', 'D', 'v', 'P', '*', 'X', '<', '>']
+
+    for ds, info in datasets.items():
+        n_metrics = len(metric_names)
+        nrows = int(np.ceil(n_metrics / ncols))
+        fig, axes = plt.subplots(ncols=ncols, nrows=nrows,
+                                 figsize=(9*ncols, 4*nrows),
+                                 constrained_layout=True)
+        axes = axes.flatten() if n_metrics > 1 else axes
+
+        for idx, metric in enumerate(metric_names):
+            for i, model in enumerate(metrics_dict.keys()):
+                vals = list([metrics_dict[model].get(metric, {}).get(ds, {}).get(s, np.nan) * (100 if metric == 'R2' else 1)
+                             for s in station])
+                    
+                axes[idx].plot(x, vals, marker=marker_list[i], label=model)
+                axes[idx].set_title(f'{metric}', fontsize=12, fontweight='bold')
+                axes[idx].set_xticks(x)
+                axes[idx].set_xticklabels(x_labels)
+                axes[idx].legend()
+                axes[idx].grid(True, alpha=0.3, linestyle='--')
+
+        for j in range(n_metrics, len(axes)):
+            axes[j].axis('off')
+
+        fig.suptitle(f'So sánh độ chính xác dự báo của các mô hình trên tập {info}', fontsize=16, fontweight='bold', y=1.03)
+        plt.show()
