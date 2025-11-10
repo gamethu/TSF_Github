@@ -109,3 +109,9 @@ Drafts/Temp Prediction/models/checkpoints/ML/XgBoost/~$XGBOOST_Tuning.xlsx
 Drafts/Temp Prediction/models/LSTMAutoencoders
 *.pkl
 /Drafts/Temp Prediction/notebooks/3.2. DL_model/lightning_logs
+#Drafts/Temp Prediction/data/34_provinces_VN.zip
+Drafts/Temp Prediction/data/34_provinces_VN/34_provinces_VN.cpg
+Drafts/Temp Prediction/data/34_provinces_VN/34_provinces_VN.dbf
+Drafts/Temp Prediction/data/34_provinces_VN/34_provinces_VN.prj
+Drafts/Temp Prediction/data/34_provinces_VN/34_provinces_VN.shp
+Drafts/Temp Prediction/data/34_provinces_VN/34_provinces_VN.shx
