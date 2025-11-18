@@ -12,8 +12,8 @@ scikit-learn==1.7.1
 # cuml-cu12
 tensorflow<2.11
 xgboost==3.1.1
-darts==0.38.0
-pytorch-forecasting==1.5.0
+darts==0.35.0
+# pytorch-forecasting==1.5.0
 matplotlib
 seaborn
 statsmodels
@@ -22,7 +22,7 @@ keract
 # torch 
 # torchvision 
 # pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu118
-lightning
+lightning==2.5.6
 
 torchaudio
 cfgrib
@@ -40,5 +40,5 @@ graphviz # <~> OUTofDATE <~> use conda instead
 # conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 # conda install -c conda-forge graphviz=2.50.0
 
-shap
+shap==0.49.1
 # lime
