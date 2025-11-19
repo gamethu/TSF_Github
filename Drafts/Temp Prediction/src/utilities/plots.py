@@ -891,6 +891,7 @@ def plot_evaluate_params_over_time(
                                    target_cols_name, station_name, x_fit, y_true, model, params, 
                                    scaler     = None,
                                    method     = "short",
+                                   type       = "ML",
                                    metrics    = list([
                                                      #  "R2",   
                                                       "MAE",
@@ -962,16 +963,26 @@ def plot_evaluate_params_over_time(
                 for values in params[key]:
                     local_model = deepcopy(model)
                     local_model = local_model.set_params(**{key: values})
-                    local_model = local_model.fit(x_fit[0],y_true[0])
-                    y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                        index   = y_true[0].index, 
-                                                        columns = [y_true[0].name]),
-                                        pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                        index   = y_true[1].index, 
-                                                        columns = [y_true[1].name])])
+                    if type == "ML":
+                        local_model = local_model.fit(x_fit[0],y_true[0])
+                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                            index   = y_true[0].index, 
+                                                            columns = [y_true[0].name]),
+                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                            index   = y_true[1].index, 
+                                                            columns = [y_true[1].name])])
+                    if type == "DL":
+                        local_model = local_model.fit(x_fit[0], y_true[0],
+                                                      x_fit[1], y_true[1])
+                        y_fit       = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
+                                                         index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
+                                                         columns = [y_true[0].name]),
+                                            pd.DataFrame(data    = local_model.predict_history(type="valid"), 
+                                                         index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
+                                                         columns = [y_true[1].name])])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
-                                                                y_true    = y_true,
+                                                                y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                 display   = False,
                                                                 step_size = step_size,
                                                                 freq      = freq,
@@ -992,19 +1003,29 @@ def plot_evaluate_params_over_time(
                 if not ((i==1 and j==1) or (j!=1)):
                     print("Skip")
                     continue
-                local_model = local_model.fit(x_fit[0],y_true[0])
-                y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                 index   = y_true[0].index, 
-                                                 columns = [y_true[0].name]),
-                                    pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                 index   = y_true[1].index, 
-                                                 columns = [y_true[1].name])])
+                if type == "ML":
+                        local_model = local_model.fit(x_fit[0],y_true[0])
+                        y_fit       = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
+                                                            index   = y_true[0].index, 
+                                                            columns = [y_true[0].name]),
+                                            pd.DataFrame(data    = local_model.predict(x_fit[1]), 
+                                                            index   = y_true[1].index, 
+                                                            columns = [y_true[1].name])])
+                if type == "DL":
+                    local_model = local_model.fit(x_fit[0], y_true[0],
+                                                    x_fit[1], y_true[1])
+                    y_fit       = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
+                                                        index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
+                                                        columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict_history(type="valid"), 
+                                                        index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
+                                                        columns = [y_true[1].name])])
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
                     MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1024,7 +1045,7 @@ def plot_evaluate_params_over_time(
                 if "MSE" in metrics:
                     MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1044,7 +1065,7 @@ def plot_evaluate_params_over_time(
                 if "RMSE" in metrics:
                     RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1064,7 +1085,7 @@ def plot_evaluate_params_over_time(
                 if "MSLE" in metrics:
                     MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         scaler    = scaler,
@@ -1084,7 +1105,7 @@ def plot_evaluate_params_over_time(
                 if "MAPE" in metrics:
                     MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         scaler    = scaler,
@@ -1125,7 +1146,7 @@ def plot_evaluate_params_over_time(
                 # if metrics.get("R2") is not None:
                 #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                 #                                                 y_pred    = y_fit,
-                #                                                 y_true    = y_true,
+                #                                                 y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                 #                                                 display   = False,
                 #                                                 freq      = freq,
                 #                                                 ax        = None)
@@ -1161,7 +1182,7 @@ def plot_evaluate_params_over_time(
                                                     columns = [y_true[1].name])])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
-                                                                y_true    = y_true,
+                                                                y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                 display   = False,
                                                                 step_size = step_size,
                                                                 freq      = freq,
@@ -1192,7 +1213,7 @@ def plot_evaluate_params_over_time(
                 if "MAE" in metrics:
                     MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     freq      = freq,
@@ -1211,7 +1232,7 @@ def plot_evaluate_params_over_time(
                 if "MSE" in metrics:
                     MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     freq      = freq,
@@ -1230,7 +1251,7 @@ def plot_evaluate_params_over_time(
                 if "RMSE" in metrics:
                     RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     freq      = freq,
@@ -1249,7 +1270,7 @@ def plot_evaluate_params_over_time(
                 if "MSLE" in metrics:
                     MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
@@ -1268,7 +1289,7 @@ def plot_evaluate_params_over_time(
                 if "MAPE" in metrics:
                     MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
@@ -1308,7 +1329,7 @@ def plot_evaluate_params_over_time(
             # if metrics.get("R2") is not None:
             #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
             #                                                 y_pred    = y_fit,
-            #                                                 y_true    = y_true,
+            #                                                 y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
             #                                                 display   = display,
             #                                                 freq      = freq,
             #                                                 ax        = list([axes[0,0],axes[0,1]]))
