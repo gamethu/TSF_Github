@@ -1023,14 +1023,18 @@ def plot_evaluate_params_over_time(
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
-                    MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    scaler    = scaler,
-                                                                    freq      = freq,
-                                                                    ax        = None)
+                    try:
+                        MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        scaler    = scaler,
+                                                                        freq      = freq,
+                                                                        ax        = None)
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
@@ -1043,14 +1047,18 @@ def plot_evaluate_params_over_time(
 
                 # Option 3
                 if "MSE" in metrics:
-                    MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    scaler    = scaler,
-                                                                    freq      = freq,
-                                                                    ax        = None)
+                    try:
+                        MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        scaler    = scaler,
+                                                                        freq      = freq,
+                                                                        ax        = None)
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
@@ -1063,14 +1071,18 @@ def plot_evaluate_params_over_time(
 
                 # Option 3.2
                 if "RMSE" in metrics:
-                    RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    scaler    = scaler,
-                                                                    freq      = freq,
-                                                                    ax        = None)
+                    try:
+                        RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        scaler    = scaler,
+                                                                        freq      = freq,
+                                                                        ax        = None)
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
@@ -1083,14 +1095,18 @@ def plot_evaluate_params_over_time(
 
                 # Option 4
                 if "MSLE" in metrics:
-                    MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        scaler    = scaler,
-                                                                        freq      = freq,
-                                                                        ax        = None)
+                    try:
+                        MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
+                                                                            y_pred    = y_fit,
+                                                                            y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                            display   = False,
+                                                                            step_size = step_size,
+                                                                            scaler    = scaler,
+                                                                            freq      = freq,
+                                                                            ax        = None)
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
@@ -1103,14 +1119,18 @@ def plot_evaluate_params_over_time(
 
                 # Option 5
                 if "MAPE" in metrics:
-                    MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        scaler    = scaler,
-                                                                        freq      = freq,
-                                                                        ax        = None)
+                    try:
+                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                            y_pred    = y_fit,
+                                                                            y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                            display   = False,
+                                                                            step_size = step_size,
+                                                                            scaler    = scaler,
+                                                                            freq      = freq,
+                                                                            ax        = None)
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
@@ -1211,13 +1231,17 @@ def plot_evaluate_params_over_time(
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
-                    MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    freq      = freq,
-                                                                    ax        = list([axes[1,0],axes[1,1]]))
+                    try:
+                        MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        freq      = freq,
+                                                                        ax        = list([axes[1,0],axes[1,1]]))
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
@@ -1230,13 +1254,17 @@ def plot_evaluate_params_over_time(
 
                 # Option 3
                 if "MSE" in metrics:
-                    MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    freq      = freq,
-                                                                    ax        = list([axes[2,0],axes[2,1]]))
+                    try:
+                        MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        freq      = freq,
+                                                                        ax        = list([axes[2,0],axes[2,1]]))
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
@@ -1249,13 +1277,17 @@ def plot_evaluate_params_over_time(
                     
                 # Option 3.2
                 if "RMSE" in metrics:
-                    RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
-                                                                    y_pred    = y_fit,
-                                                                    y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                    display   = False,
-                                                                    step_size = step_size,
-                                                                    freq      = freq,
-                                                                    ax        = list([axes[2,0],axes[2,1]]))
+                    try:
+                        RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        freq      = freq,
+                                                                        ax        = list([axes[2,0],axes[2,1]]))
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
@@ -1268,13 +1300,17 @@ def plot_evaluate_params_over_time(
 
                 # Option 4
                 if "MSLE" in metrics:
-                    MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        freq      = freq,
-                                                                        ax        = list([axes[3,0],axes[3,1]]))
+                    try:
+                        MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
+                                                                            y_pred    = y_fit,
+                                                                            y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                            display   = False,
+                                                                            step_size = step_size,
+                                                                            freq      = freq,
+                                                                            ax        = list([axes[3,0],axes[3,1]]))
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
@@ -1287,13 +1323,17 @@ def plot_evaluate_params_over_time(
 
                 # Option 5
                 if "MAPE" in metrics:
-                    MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        freq      = freq,
-                                                                        ax        = list([axes[4,0],axes[4,1]]))
+                    try:
+                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
+                                                                            y_pred    = y_fit,
+                                                                            y_true    = y_true if type == "ML" else [x[local_model.get_params()["input_chunk_length"]:] for x in y_true],
+                                                                            display   = False,
+                                                                            step_size = step_size,
+                                                                            freq      = freq,
+                                                                            ax        = list([axes[4,0],axes[4,1]]))
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
                     # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
                     # global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
