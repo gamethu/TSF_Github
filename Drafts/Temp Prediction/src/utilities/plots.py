@@ -963,24 +963,24 @@ def plot_evaluate_params_over_time(
                 for values in params[key]:
                     local_model = deepcopy(model)
                     local_model = local_model.set_params(**{key: values})
+                    local_model = local_model.fit(x_fit[0], y_true[0],
+                                                    x_fit[1], y_true[1])
                     if type == "ML":
                         local_model = local_model.fit(x_fit[0],y_true[0])
-                        y_fit  = list([pd.DataFrame(data    = local_model.predict(x_fit[0]), 
-                                                    index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
-                                                    columns = [y_true[0].name]),
-                                       pd.DataFrame(data    = local_model.predict(x_fit[1]), 
-                                                    index   = y_true[1].index, 
-                                                    columns = [y_true[1].name])])
-                        y_true = list(y_true[0].iloc[input_chunk_length:], y_true[1])
-                    if type == "DL":
-                        local_model = local_model.fit(x_fit[0], y_true[0],
-                                                      x_fit[1], y_true[1])
                         y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
                                                     index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
                                                     columns = [y_true[0].name]),
-                                       pd.DataFrame(data    = local_model.predict_history(type="valid"), 
-                                                    index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
-                                                    columns = [y_true[1].name])])
+                                        pd.DataFrame(data    = local_model.predict_history(type="valid"), 
+                                                     index   = y_true[1].index, 
+                                                     columns = [y_true[1].name])])
+                        y_true = list(y_true[0].iloc[input_chunk_length:], y_true[1])
+                    if type == "DL":
+                        y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
+                                                    index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
+                                                    columns = [y_true[0].name]),
+                                        pd.DataFrame(data    = local_model.predict_history(type="valid"), 
+                                                     index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
+                                                     columns = [y_true[1].name])])
                         y_true = list(y_true[0].iloc[input_chunk_length:], y_true[1].iloc[input_chunk_length:])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
