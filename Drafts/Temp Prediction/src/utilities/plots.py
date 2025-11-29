@@ -1028,48 +1028,68 @@ def plot_evaluate_params_over_time(
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
-                    try:
-                        MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true,
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        scaler    = scaler,
-                                                                        freq      = freq,
-                                                                        ax        = None)
-                        total_score += MAE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAE_SCORE_TEST
-                    except Exception as e:
-                        print(f"Something went wrong MAE... SKip this params {params[key]}")
-                        continue
+                    # try:
+                    MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    scaler    = scaler,
+                                                                    freq      = freq,
+                                                                    ax        = None)
+                    total_score += MAE_SCORE_TEST
+                    print(total_score)
+                    if j==1 and i==1:
+                        global_best += MAE_SCORE_TEST
+                    # except Exception as e:
+                    #     print(f"Something went wrong MAE... SKip this params {params[key]}")
+                    #     continue
                     print()
 
                 # Option 3
                 if "MSE" in metrics:
-                    try:
-                        MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
-                                                                        y_pred    = y_fit,
-                                                                        y_true    = y_true,
-                                                                        display   = False,
-                                                                        step_size = step_size,
-                                                                        scaler    = scaler,
-                                                                        freq      = freq,
-                                                                        ax        = None)
-                        total_score += MSE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSE_SCORE_TEST
-                    except Exception as e:
-                        print(f"Something went wrong MSE... SKip this params {params[key]}")
-                        continue
+                # try:
+                    MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    scaler    = scaler,
+                                                                    freq      = freq,
+                                                                    ax        = None)
+                    total_score += MSE_SCORE_TEST
+                    print(total_score)
+                    if j==1 and i==1:
+                        global_best += MSE_SCORE_TEST
+                # except Exception as e:
+                #     print(f"Something went wrong MSE... SKip this params {params[key]}")
+                #     continue
                     print()
 
                 # Option 3.2
                 if "RMSE" in metrics:
-                    try:
-                        RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                # try:
+                    RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
+                                                                    y_pred    = y_fit,
+                                                                    y_true    = y_true,
+                                                                    display   = False,
+                                                                    step_size = step_size,
+                                                                    scaler    = scaler,
+                                                                    freq      = freq,
+                                                                    ax        = None)
+                    total_score += RMSE_SCORE_TEST
+                    print(total_score)
+                    if j==1 and i==1:
+                        global_best += RMSE_SCORE_TEST
+                # except Exception as e:
+                #     print(f"Something went wrong RMSE... SKip this params {params[key]}")
+                #     continue
+                    print()
+
+                # Option 4
+                if "MSLE" in metrics:
+                # try:
+                    MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
                                                                         y_true    = y_true,
                                                                         display   = False,
@@ -1077,56 +1097,36 @@ def plot_evaluate_params_over_time(
                                                                         scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
-                        total_score += RMSE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += RMSE_SCORE_TEST
-                    except Exception as e:
-                        print(f"Something went wrong RMSE... SKip this params {params[key]}")
-                        continue
-                    print()
-
-                # Option 4
-                if "MSLE" in metrics:
-                    try:
-                        MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
-                                                                            y_pred    = y_fit,
-                                                                            y_true    = y_true,
-                                                                            display   = False,
-                                                                            step_size = step_size,
-                                                                            scaler    = scaler,
-                                                                            freq      = freq,
-                                                                            ax        = None)
-                        total_score += MSLE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MSLE_SCORE_TEST
-                    except Exception as e:
-                        print(f"Something went wrong MSLE... SKip this params {params[key]}")
-                        continue
+                    total_score += MSLE_SCORE_TEST
+                    print(total_score)
+                    if j==1 and i==1:
+                        global_best += MSLE_SCORE_TEST
+                # except Exception as e:
+                #     print(f"Something went wrong MSLE... SKip this params {params[key]}")
+                #     continue
                     print()
 
                 # Option 5
                 if "MAPE" in metrics:
-                    try:
-                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                                                                            y_pred    = y_fit,
-                                                                            y_true    = y_true,
-                                                                            display   = False,
-                                                                            step_size = step_size,
-                                                                            scaler    = scaler,
-                                                                            freq      = freq,
-                                                                            ax        = None)
-                        total_score += MAPE_SCORE_TEST
-                        print(global_d[param_key])
-                        if j==1 and i==1:
-                            global_best += MAPE_SCORE_TEST
-                    except Exception as e:
-                        print(f"Something went wrong... SKip this params {params[key]}")
-                        continue
+                # try:
+                    MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                        y_pred    = y_fit,
+                                                                        y_true    = y_true,
+                                                                        display   = False,
+                                                                        step_size = step_size,
+                                                                        scaler    = scaler,
+                                                                        freq      = freq,
+                                                                        ax        = None)
+                    total_score += MAPE_SCORE_TEST
+                    print(total_score)
+                    if j==1 and i==1:
+                        global_best += MAPE_SCORE_TEST
+                # except Exception as e:
+                #     print(f"Something went wrong... SKip this params {params[key]}")
+                #     continue
                     
-                    global_d[param_key] = total_score
-                    print()
+                global_d[param_key] = total_score
+                print()
                     
                 # Option 6
         best_param_key = min(global_d, key=global_d.get)
