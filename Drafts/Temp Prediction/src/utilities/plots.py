@@ -717,7 +717,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "R2" in metrics:
 #             R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
 #                                                         y_pred    = y_pred,
-#                                                         y_true    = y_true,
+#                                                         y_true    = y_true_temp,
 #                                                         display   = False,
 #                                                         step_size = step_size,
 #                                                         freq      = freq,
@@ -730,7 +730,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MAE" in metrics:
 #             MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
 #                                                             y_pred    = y_pred,
-#                                                             y_true    = y_true,
+#                                                             y_true    = y_true_temp,
 #                                                             display   = False,
 #                                                             step_size = step_size,
 #                                                             freq      = freq,
@@ -743,7 +743,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MSE" in metrics:
 #             MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
 #                                                             y_pred    = y_pred,
-#                                                             y_true    = y_true,
+#                                                             y_true    = y_true_temp,
 #                                                             display   = False,
 #                                                             step_size = step_size,
 #                                                             freq      = freq,
@@ -756,7 +756,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MSLE" in metrics:
 #             MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
 #                                                                 y_pred    = y_pred,
-#                                                                 y_true    = y_true,
+#                                                                 y_true    = y_true_temp,
 #                                                                 display   = False,
 #                                                                 step_size = step_size,
 #                                                                 freq      = freq,
@@ -769,7 +769,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MAPE" in metrics:
 #             MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
 #                                                                 y_pred    = y_pred,
-#                                                                 y_true    = y_true,
+#                                                                 y_true    = y_true_temp,
 #                                                                 display   = False,
 #                                                                 step_size = step_size,
 #                                                                 freq      = freq,
@@ -782,7 +782,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         # if metrics.get("R2") is not None:
 #         #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
 #         #                                                 y_pred    = y_pred,
-#         #                                                 y_true    = y_true,
+#         #                                                 y_true    = y_true_temp,
 #         #                                                 display   = False,
 #         #                                                 freq      = freq,
 #         #                                                 ax        = None)
@@ -801,7 +801,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "R2" in metrics:
 #             R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
 #                                                         y_pred    = y_pred,
-#                                                         y_true    = y_true,
+#                                                         y_true    = y_true_temp,
 #                                                         display   = display,
 #                                                         step_size = step_size,
 #                                                         freq      = freq,
@@ -814,7 +814,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MAE" in metrics:
 #             MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
 #                                                             y_pred    = y_pred,
-#                                                             y_true    = y_true,
+#                                                             y_true    = y_true_temp,
 #                                                             display   = display,
 #                                                             step_size = step_size,
 #                                                             freq      = freq,
@@ -827,7 +827,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MSE" in metrics:
 #             MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
 #                                                             y_pred    = y_pred,
-#                                                             y_true    = y_true,
+#                                                             y_true    = y_true_temp,
 #                                                             display   = display,
 #                                                             step_size = step_size,
 #                                                             freq      = freq,
@@ -840,7 +840,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MSLE" in metrics:
 #             MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
 #                                                                 y_pred    = y_pred,
-#                                                                 y_true    = y_true,
+#                                                                 y_true    = y_true_temp,
 #                                                                 display   = display,
 #                                                                 step_size = step_size,
 #                                                                 freq      = freq,
@@ -853,7 +853,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         if "MAPE" in metrics:
 #             MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
 #                                                                 y_pred    = y_pred,
-#                                                                 y_true    = y_true,
+#                                                                 y_true    = y_true_temp,
 #                                                                 display   = display,
 #                                                                 step_size = step_size,
 #                                                                 freq      = freq,
@@ -866,7 +866,7 @@ def custom_evaluate_model(y_true, outlier_idx, station_name, feature_name, ax, m
 #         # if metrics.get("R2") is not None:
 #         #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
 #         #                                                 y_pred    = y_pred,
-#         #                                                 y_true    = y_true,
+#         #                                                 y_true    = y_true_temp,
 #         #                                                 display   = display,
 #         #                                                 freq      = freq,
 #         #                                                 ax        = list([axes[0,0],axes[0,1]]))
@@ -966,10 +966,10 @@ def plot_evaluate_params_over_time(
                     local_model = local_model.fit(x_fit[0], y_true[0],
                                                     x_fit[1], y_true[1])
                     if type == "ML":
-                        y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train", verbose=True), 
+                        y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
                                                     index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
                                                     columns = [y_true[0].name]),
-                                        pd.DataFrame(data    = local_model.predict_history(type="valid", verbose=True), 
+                                        pd.DataFrame(data    = local_model.predict_history(type="valid"), 
                                                      index   = y_true[1].index, 
                                                      columns = [y_true[1].name])])
                         y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
@@ -983,7 +983,7 @@ def plot_evaluate_params_over_time(
                         y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1].iloc[local_model.get_params()["input_chunk_length"]:]])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
-                                                                y_true    = y_true,
+                                                                y_true    = y_true_temp,
                                                                 display   = False,
                                                                 step_size = step_size,
                                                                 freq      = freq,
@@ -1016,7 +1016,7 @@ def plot_evaluate_params_over_time(
                                         pd.DataFrame(data    = local_model.predict_history(type="valid"), 
                                                      index   = y_true[1].index, 
                                                      columns = [y_true[1].name])])
-                        y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
+                        y_true_temp = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
                 if type == "DL":
                     y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
                                                 index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
@@ -1024,14 +1024,14 @@ def plot_evaluate_params_over_time(
                                     pd.DataFrame(data    = local_model.predict_history(type="valid"), 
                                                     index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
                                                     columns = [y_true[1].name])])
-                    y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1].iloc[local_model.get_params()["input_chunk_length"]:]])
+                    y_true_temp = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1].iloc[local_model.get_params()["input_chunk_length"]:]])
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
                     # try:
                     MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true_temp,
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1051,7 +1051,7 @@ def plot_evaluate_params_over_time(
                 # try:
                     MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true_temp,
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1071,7 +1071,7 @@ def plot_evaluate_params_over_time(
                 # try:
                     RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
                                                                     y_pred    = y_fit,
-                                                                    y_true    = y_true,
+                                                                    y_true    = y_true_temp,
                                                                     display   = False,
                                                                     step_size = step_size,
                                                                     scaler    = scaler,
@@ -1091,7 +1091,7 @@ def plot_evaluate_params_over_time(
                 # try:
                     MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true_temp,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         scaler    = scaler,
@@ -1111,7 +1111,7 @@ def plot_evaluate_params_over_time(
                 # try:
                     MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true_temp,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         scaler    = scaler,
@@ -1155,7 +1155,7 @@ def plot_evaluate_params_over_time(
                 # if metrics.get("R2") is not None:
                 #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                 #                                                 y_pred    = y_fit,
-                #                                                 y_true    = y_true,
+                #                                                 y_true    = y_true_temp,
                 #                                                 display   = False,
                 #                                                 freq      = freq,
                 #                                                 ax        = None)
@@ -1191,7 +1191,7 @@ def plot_evaluate_params_over_time(
                                                     columns = [y_true[1].name])])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
-                                                                y_true    = y_true,
+                                                                y_true    = y_true_temp,
                                                                 display   = False,
                                                                 step_size = step_size,
                                                                 freq      = freq,
@@ -1223,7 +1223,7 @@ def plot_evaluate_params_over_time(
                     try:
                         MAE_SCORE_TRAIN, MAE_SCORE_TEST = My_MAE_SCORE(data_cols  = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true_temp,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
@@ -1246,7 +1246,7 @@ def plot_evaluate_params_over_time(
                     try:
                         MSE_SCORE_TRAIN, MSE_SCORE_TEST = My_MSE_SCORE(data_cols  = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true_temp,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
@@ -1269,7 +1269,7 @@ def plot_evaluate_params_over_time(
                     try:
                         RMSE_SCORE_TRAIN, RMSE_SCORE_TEST = My_RMSE_SCORE(data_cols  = target_cols_name,
                                                                         y_pred    = y_fit,
-                                                                        y_true    = y_true,
+                                                                        y_true    = y_true_temp,
                                                                         display   = False,
                                                                         step_size = step_size,
                                                                         freq      = freq,
@@ -1292,7 +1292,7 @@ def plot_evaluate_params_over_time(
                     try:
                         MSLE_SCORE_TRAIN, MSLE_SCORE_TEST = My_MSLE_SCORE(data_cols   = target_cols_name,
                                                                             y_pred    = y_fit,
-                                                                            y_true    = y_true,
+                                                                            y_true    = y_true_temp,
                                                                             display   = False,
                                                                             step_size = step_size,
                                                                             freq      = freq,
@@ -1315,7 +1315,7 @@ def plot_evaluate_params_over_time(
                     try:
                         MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols   = target_cols_name,
                                                                             y_pred    = y_fit,
-                                                                            y_true    = y_true,
+                                                                            y_true    = y_true_temp,
                                                                             display   = False,
                                                                             step_size = step_size,
                                                                             freq      = freq,
@@ -1358,7 +1358,7 @@ def plot_evaluate_params_over_time(
             # if metrics.get("R2") is not None:
             #     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
             #                                                 y_pred    = y_fit,
-            #                                                 y_true    = y_true,
+            #                                                 y_true    = y_true_temp,
             #                                                 display   = display,
             #                                                 freq      = freq,
             #                                                 ax        = list([axes[0,0],axes[0,1]]))
