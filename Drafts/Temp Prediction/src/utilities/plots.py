@@ -1002,6 +1002,9 @@ def plot_evaluate_params_over_time(
                 local_model = deepcopy(model)
                 local_model = local_model.set_params(**{key: values})
                 print(local_model)
+                
+                total_score = 0
+                
                 if not ((i==1 and j==1) or (j!=1)):
                     print("Skip")
                     continue
@@ -1034,17 +1037,13 @@ def plot_evaluate_params_over_time(
                                                                         scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
-                        global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TEST
+                        total_Score += MAE_SCORE_TEST
                         print(global_d[param_key])
                         if j==1 and i==1:
-                            # global_best += MAE_SCORE_TRAIN + MAE_SCORE_TEST
                             global_best += MAE_SCORE_TEST
                     except Exception as e:
                         print(f"Something went wrong... SKip this params {params[key]}")
                         continue
-                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TRAIN}")
-                    # print(f"🔹 {target_cols_name}_{name} (MAE_{key} = {values} : {MAE_SCORE_TEST}")
-                    # global_d[param_key] = global_d.get(param_key, 0) + MAE_SCORE_TRAIN + MAE_SCORE_TEST
                     print()
 
                 # Option 3
@@ -1058,17 +1057,13 @@ def plot_evaluate_params_over_time(
                                                                         scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
-                        global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TEST
+                        total_score += MSE_SCORE_TEST
                         print(global_d[param_key])
                         if j==1 and i==1:
-                            # global_best += MSE_SCORE_TRAIN + MSE_SCORE_TEST
                             global_best += MSE_SCORE_TEST
                     except Exception as e:
                         print(f"Something went wrong... SKip this params {params[key]}")
                         continue
-                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TRAIN}")
-                    # print(f"🔹 {target_cols_name}_{name} (MSE_{key} = {values} : {MSE_SCORE_TEST}")
-                    # global_d[param_key] = global_d.get(param_key, 0) + MSE_SCORE_TRAIN + MSE_SCORE_TEST
                     print()
 
                 # Option 3.2
@@ -1082,17 +1077,13 @@ def plot_evaluate_params_over_time(
                                                                         scaler    = scaler,
                                                                         freq      = freq,
                                                                         ax        = None)
-                        global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TEST
+                        total_score += RMSE_SCORE_TEST
                         print(global_d[param_key])
                         if j==1 and i==1:
-                            # global_best += RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
                             global_best += RMSE_SCORE_TEST
                     except Exception as e:
                         print(f"Something went wrong... SKip this params {params[key]}")
                         continue
-                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TRAIN}")
-                    # print(f"🔹 {target_cols_name}_{name} (RMSE_{key} = {values} : {RMSE_SCORE_TEST}")
-                    # global_d[param_key] = global_d.get(param_key, 0) + RMSE_SCORE_TRAIN + RMSE_SCORE_TEST
                     print()
 
                 # Option 4
@@ -1106,17 +1097,13 @@ def plot_evaluate_params_over_time(
                                                                             scaler    = scaler,
                                                                             freq      = freq,
                                                                             ax        = None)
-                        global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TEST
+                        total_score += MSLE_SCORE_TEST
                         print(global_d[param_key])
                         if j==1 and i==1:
-                            # global_best += MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
                             global_best += MSLE_SCORE_TEST
                     except Exception as e:
                         print(f"Something went wrong... SKip this params {params[key]}")
                         continue
-                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TRAIN}")
-                    # print(f"🔹 {target_cols_name}_{name} (MSLE_{key} = {values} : {MSLE_SCORE_TEST}")
-                    # global_d[param_key] = global_d.get(param_key, 0) + MSLE_SCORE_TRAIN + MSLE_SCORE_TEST
                     print()
 
                 # Option 5
@@ -1130,17 +1117,15 @@ def plot_evaluate_params_over_time(
                                                                             scaler    = scaler,
                                                                             freq      = freq,
                                                                             ax        = None)
-                        global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TEST
+                        total_score += MAPE_SCORE_TEST
                         print(global_d[param_key])
                         if j==1 and i==1:
-                            # global_best += MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
                             global_best += MAPE_SCORE_TEST
                     except Exception as e:
                         print(f"Something went wrong... SKip this params {params[key]}")
                         continue
-                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TRAIN}")
-                    # print(f"🔹 {target_cols_name}_{name} (MAPE_{key} = {values} : {MAPE_SCORE_TEST}")
-                    # global_d[param_key] = global_d.get(param_key, 0) + MAPE_SCORE_TRAIN + MAPE_SCORE_TEST
+                    
+                    global_d[param_key] = total_score
                     print()
         best_param_key = min(global_d, key=global_d.get)
         if global_d[best_param_key] < global_best:
