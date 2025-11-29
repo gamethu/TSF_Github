@@ -966,10 +966,10 @@ def plot_evaluate_params_over_time(
                     local_model = local_model.fit(x_fit[0], y_true[0],
                                                     x_fit[1], y_true[1])
                     if type == "ML":
-                        y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
+                        y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train", verbose=True), 
                                                     index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
                                                     columns = [y_true[0].name]),
-                                        pd.DataFrame(data    = local_model.predict_history(type="valid"), 
+                                        pd.DataFrame(data    = local_model.predict_history(type="valid", verbose=True), 
                                                      index   = y_true[1].index, 
                                                      columns = [y_true[1].name])])
                         y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
@@ -1106,27 +1106,27 @@ def plot_evaluate_params_over_time(
                         continue
                     print()
 
-                # # Option 5
-                # if "MAPE" in metrics:
-                #     try:
-                #         MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
-                #                                                             y_pred    = y_fit,
-                #                                                             y_true    = y_true,
-                #                                                             display   = False,
-                #                                                             step_size = step_size,
-                #                                                             scaler    = scaler,
-                #                                                             freq      = freq,
-                #                                                             ax        = None)
-                #         total_score += MAPE_SCORE_TEST
-                #         print(global_d[param_key])
-                #         if j==1 and i==1:
-                #             global_best += MAPE_SCORE_TEST
-                #     except Exception as e:
-                #         print(f"Something went wrong... SKip this params {params[key]}")
-                #         continue
+                # Option 5
+                if "MAPE" in metrics:
+                    try:
+                        MAPE_SCORE_TRAIN, MAPE_SCORE_TEST = My_MAPE_SCORE(data_cols = target_cols_name,
+                                                                            y_pred    = y_fit,
+                                                                            y_true    = y_true,
+                                                                            display   = False,
+                                                                            step_size = step_size,
+                                                                            scaler    = scaler,
+                                                                            freq      = freq,
+                                                                            ax        = None)
+                        total_score += MAPE_SCORE_TEST
+                        print(global_d[param_key])
+                        if j==1 and i==1:
+                            global_best += MAPE_SCORE_TEST
+                    except Exception as e:
+                        print(f"Something went wrong... SKip this params {params[key]}")
+                        continue
                     
-                #     global_d[param_key] = total_score
-                #     print()
+                    global_d[param_key] = total_score
+                    print()
                     
                 # Option 6
         best_param_key = min(global_d, key=global_d.get)
