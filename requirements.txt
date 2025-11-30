@@ -10,7 +10,7 @@ openpyxl
 
 scikit-learn==1.7.1
 # cuml-cu12
-tensorflow<2.11
+# tensorflow<2.11
 xgboost==3.1.1
 darts==0.35.0
 # pytorch-forecasting==1.5.0
