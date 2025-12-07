@@ -1000,15 +1000,15 @@ def plot_evaluate_params_over_time(
                 print(f"Turn: {j}/{local_total}")
                 local_model = deepcopy(model)
                 local_model = local_model.set_params(**{key: values})
-                local_model = local_model.fit(x_fit[0], y_true[0],
-                                              x_fit[1], y_true[1])
-                print(local_model)
-                
-                total_score = 0
-                
                 if not ((i==1 and j==1) or (j!=1)):
                     print("Skip")
                     continue
+                print(local_model)
+                local_model = local_model.fit(x_fit[0], y_true[0],
+                                              x_fit[1], y_true[1])
+                
+                total_score = 0
+                
                 if type == "ML":
                         y_fit  = list([pd.DataFrame(data    = local_model.predict_history(type="train"), 
                                                     index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
