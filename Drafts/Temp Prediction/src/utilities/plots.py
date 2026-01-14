@@ -978,9 +978,9 @@ def plot_evaluate_params_over_time(
                                                     index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
                                                     columns = [y_true[0].name]),
                                         pd.DataFrame(data    = local_model.predict_history(type="valid"), 
-                                                     index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
+                                                     index   = y_true[1].index, 
                                                      columns = [y_true[1].name])])
-                        y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1].iloc[local_model.get_params()["input_chunk_length"]:]])
+                        y_true = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
                     R2_SCORE_TRAIN, R2_SCORE_TEST = My_R2_SCORE(data_cols = target_cols_name,
                                                                 y_pred    = y_fit,
                                                                 y_true    = y_true_temp,
@@ -1022,9 +1022,9 @@ def plot_evaluate_params_over_time(
                                                 index   = y_true[0].index[local_model.get_params()["input_chunk_length"]:], 
                                                 columns = [y_true[0].name]),
                                     pd.DataFrame(data    = local_model.predict_history(type="valid"), 
-                                                    index   = y_true[1].index[local_model.get_params()["input_chunk_length"]:], 
+                                                    index   = y_true[1].index, 
                                                     columns = [y_true[1].name])])
-                    y_true_temp = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1].iloc[local_model.get_params()["input_chunk_length"]:]])
+                    y_true_temp = list([y_true[0].iloc[local_model.get_params()["input_chunk_length"]:], y_true[1]])
                 param_key   = f"{key}_{values}"
                 # Option 2
                 if "MAE" in metrics:
