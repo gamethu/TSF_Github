@@ -1,0 +1,37 @@
+web:
+  # __________DATA__________ #
+  data-preparation:
+    image: data-preparation:30/12/2025
+    build:
+      context: ./data-preparation
+      dockerfile: Dockerfile
+    volumes:
+      - ./data-preparation:/web
+  
+
+  # __________BACKEND__________ #
+  backend:
+    image: backend:30/12/2025
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/web
+    depends_on:
+      - data-preparation
+
+
+  # __________FRONTEND__________ #
+  frontend:
+    image: frontend:30/12/2025
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/web
+    depends_on:
+      - backend

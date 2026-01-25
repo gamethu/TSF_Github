@@ -110,3 +110,19 @@ Drafts/Temp Prediction/models/LSTMAutoencoders
 *.pkl
 /Drafts/Temp Prediction/notebooks/3.2. DL_model/lightning_logs
 /Drafts/Temp Prediction/outputs
+
+Final/backend/__pycache__
+Final/backend/modules/analytics/__pycache__
+Final/backend/modules/analytics/Country/__pycache__
+Final/backend/modules/analytics/Product/__pycache__
+Final/backend/routes/__pycache__
+Final/frontend/pages/analysis/__pycache__
+Final/frontend/pages/predict/__pycache__
+Final/frontend/pages/author/__pycache__
+Final/frontend/components/__pycache__
+Final/backend/modules/analysis/__pycache__
+Final/backend/modules/Model/__pycache__
+Final/backend/modules/Product/__pycache__
+Final/backend/modules/Station/__pycache__
+Final/frontend/pages/forecast/__pycache__
+Final/frontend/pages/architecture/__pycache__
