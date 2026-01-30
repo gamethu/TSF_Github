@@ -1,23 +1,93 @@
 from pathlib import Path
 from fastapi import HTTPException
 
-
 async def getAll():
     base_dir = Path(__file__).resolve().parent
-    data_dir = (base_dir / "../../../../../Drafts/data/processed").resolve()
-    
-    if not data_dir.exists():
-        raise HTTPException(status_code=404, detail="Data directory not found")
-    
-    res = {}
-    for country in data_dir.iterdir():
-        res[country.name] = dict()
-        for storeid in country.iterdir():
-            res[country.name][storeid.name.replace(".csv","")] = str(storeid.resolve())
-    return res
-async def findByCountryName(name):
-    pass
+    return dict({"CaMau" : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/CaMau_90.24_cleaned.csv").resolve(),
+                 "DH"    : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/DH_90.24_cleaned.csv").resolve(),
+                 "NB"    : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/NB_90.24_cleaned.csv").resolve(),
+                 "QN"    : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/QN_90.24_cleaned.csv").resolve(),
+                 "TH"    : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/TH_90.24_cleaned.csv").resolve(),
+                 "TSN"   : (base_dir / "../../../../Drafts/Temp Prediction/data/processed/datasets/TSN_90.24_cleaned.csv").resolve()})
+async def getModelPredict():
+    base_dir = Path(__file__).resolve().parent
+    return dict({"RF"  : {"CaMau" : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/CaMau/test.png").resolve()}},
+                          "DH"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/DH/test.png").resolve()}},
+                          "NB"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/NB/test.png").resolve()}},
+                          "QN"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/QN/test.png").resolve()}},
+                          "TH"     : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TH/test.png").resolve()}},
+                          "TSN"   : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/Random Forest/TSN/test.png").resolve()}}},
+                 "XGB"  : {"CaMau" : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/train.csv").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/valid.csv").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/test.csv").resolve()},
+                                     ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/train.png").resolve(),
+                                               "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/valid.png").resolve(),
+                                               "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/CaMau/test.png").resolve()}},
+                           "DH"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/train.csv").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/valid.csv").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/test.csv").resolve()},
+                                      ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/train.png").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/valid.png").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/DH/test.png").resolve()}},
+                           "NB"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/train.csv").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/valid.csv").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/test.csv").resolve()},
+                                      ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/train.png").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/valid.png").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/NB/test.png").resolve()}},
+                           "QN"    : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/train.csv").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/valid.csv").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/test.csv").resolve()},
+                                      ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/train.png").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/valid.png").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/QN/test.png").resolve()}},
+                           "TH"     : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/train.csv").resolve(),
+                                                 "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/valid.csv").resolve(),
+                                                 "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/test.csv").resolve()},
+                                      ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/train.png").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/valid.png").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TH/test.png").resolve()}},
+                           "TSN"   : {".csv" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/train.csv").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/valid.csv").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/test.csv").resolve()},
+                                      ".png" : {"train" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/train.png").resolve(),
+                                                "valid" : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/valid.png").resolve(),
+                                                "test"  : (base_dir / "../../../../Drafts/Temp Prediction/outputs/ML/XGBOOST/TSN/test.png").resolve()}}}})
 async def findByStoreID(id):
     pass
 async def findAll():
     pass
+
+
+# if not data_dir.exists():
+#         raise HTTPException(status_code=404, detail="Data directory not found")

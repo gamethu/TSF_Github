@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 from typing import List
-from modules.Model import Controller
+from modules.Station import Controller
 
-router = APIRouter(tags=["Station"])
+router = APIRouter(tags=["Stations"])
 
 @router.get("/stations/{type}")
-async def get_country_data(type): return await Controller.get(type)
+async def get_station_data(type): return await Controller.get(type)

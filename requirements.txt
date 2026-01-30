@@ -30,7 +30,7 @@ lightning==2.5.6
 cfgrib
 xarray
 metpy
-plotly
+plotly==6.5.2
 
 tqdm
 

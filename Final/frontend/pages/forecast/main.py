@@ -1,28 +1,47 @@
 import streamlit as st
-from Final.frontend.components import forecast
+from components import forecast
+from datetime import date
 import httpx
 
 def display():
-    with st.sidebar:
-        city = st.selectbox(label       = "City",
-                            index       = None,
-                            options     = httpx.get("http://127.0.0.1:8000/countries/all").json()["train"].keys(),
-                            key         = "city",
-                            placeholder = "Choose your city")
-        filter = None
-        if city:
-            filter = st.selectbox(label       = "Filter",
-                                  index       = None,
-                                  options     = ["first_category_id", "second_category_id", "third_category_id"],
-                                  key         = "filter",
-                                  placeholder = "Choose your filter")
-        
-        submitted = st.button("Submit")
+    target  = httpx.get("http://127.0.0.1:8000/models/name").json()
+    feature = list(['YEAR', 'MONTH', 'DAY',
+                    'Nina_index', 'DEW_ave', 'TEMP_ave', 'RH_ave', 
+                    'DEW_max', 'RH_max',
+                    'sp_ave', 'tcc_ave', 'tp_sum','ws_ave', 'wd_ave',
+                    ])
     
+    with st.sidebar:
+        with st.container(border=True):
+            st.markdown("<h1>Dashboard</h1>",unsafe_allow_html=True)
+            st.markdown("<h2>Dataset</h2>",unsafe_allow_html=True)
+            stations = st.selectbox(label       = "Station",
+                                    index       = None,
+                                    options     = httpx.get("http://127.0.0.1:8000/stations/name").json(),
+                                    key         = "station",
+                                    placeholder = "Choose your station")
+            models = None
+            if stations:
+                models = st.multiselect(label      = "Models",
+                                        options     = target,
+                                        default     = target,
+                                        placeholder = "Choose your models")
+            filter = None
+            if stations:
+                st.markdown("<h2>Filter</h2>",unsafe_allow_html=True)
+                filter = st.slider(label     = "How many days do you want me to forecast?",
+                                   min_value = date(2023, 1, 1),
+                                   max_value = date(2099, 12, 31),
+                                   value     = (date(2023,1,1),
+                                                date(2024,12,31)),
+                                   format    = "YYYY-MM-DD")
+                
+            submitted = st.button("Submit")
+        
     if submitted:
-        if city is None or filter is None:
+        if stations is None or models is None or filter is None:
             st.warning("Please provide all requirement")
         else: 
-            forecast.process(city, filter)
+            forecast.process(stations, models, filter, feature)
     
 display()
