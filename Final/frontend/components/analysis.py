@@ -18,7 +18,7 @@ def gen_summary(df, features, target, measure_unit, freq):
     
     for i in features:
         with st.expander(label    = i,
-                         expanded = True):
+                         expanded = False):
             cols = st.columns(7)
             cols[0].metric(label  = "🔽 Min",
                            border = True,
