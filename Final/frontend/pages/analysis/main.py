@@ -15,13 +15,14 @@ def display():
         with st.container(border=True):
             st.markdown("<h1>Dashboard</h1>",unsafe_allow_html=True)
             st.markdown("<h2>Dataset</h2>",unsafe_allow_html=True)
-            station = st.selectbox(label       = "Station",
-                                   index       = None,
-                                   options     = httpx.get("http://127.0.0.1:8000/stations/name").json(),
-                                   key         = "station",
-                                   placeholder = "Choose your station")
+            station_options = httpx.get("http://127.0.0.1:8000/stations/name").json()
+            station = st.multiselect(label       = "Station",
+                                     options     = station_options,
+                                     default     = ["TSN"] if "TSN" in station_options else [],
+                                     key         = "station",
+                                     placeholder = "Choose your station")
             # with st.expander("MAP", expanded=True):
-            analysis.render_station_geopandas_map(station)
+            analysis.render_station_geopandas_map(tuple(station))
             targets = None
             if station:
                 targets = st.multiselect(label      = "Target",
@@ -53,9 +54,9 @@ def display():
             submitted = st.button("Submit")
         
     if submitted:
-        if station is None or features is None or target is None or filter is None or freq is None:
+        if not station or not features or not targets or filter is None or freq is None:
             st.warning("Please provide all requirement")
         else: 
-            analysis.process(station, features, target, filter, freq)
+            analysis.process(station, features, targets, filter, freq)
     
 display()
