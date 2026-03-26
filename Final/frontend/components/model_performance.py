@@ -11,7 +11,9 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_percentage_error
 from sklearn.metrics import root_mean_squared_error
 import joblib
-
+from darts.models.forecasting.nbeats import NBEATSModel
+from darts.models.forecasting.transformer_model import TransformerModel
+from darts.models.forecasting.tft_model import TFTModel
 
 src_name = dict({"CaMau" : "Cà Mau",
                  "DH"    : "Đồng Hới",
@@ -29,17 +31,18 @@ def gen_model_data(stations, model_data):
     for name in stations:
         if "ML" in model_data["model"][name]:
             reg_model[name] = joblib.load(model_data["model"][name])
-        # else: # DL
-        #     # # Load lại wrapper
-        #     reg_model[name] = joblib.load(model_data["model"][name])
+        else: # DL
+            # # Load lại wrapper
+            print(model_data["wrapper"][name])
+            reg_model[name] = joblib.load(model_data["wrapper"][name])
             
-        #     # # Load lại model
-        #     if model_data["model"][name].contains("NBEATS"):
-        #         reg_model[name].model = NBEATSModel.load(model_dir + f"{model_aliases}_trained_{name}.pt",weights_only=False)
-        #     elif current_model == "TFT":
-        #         reg_model[name].model = TFTModel.load(model_dir + f"{model_aliases}_trained_{name}.pt",weights_only=False)
-        #     elif current_model == "TRANSFORMER":
-        #         reg_model[name].model = TransformerModel.load(model_dir + f"{model_aliases}_trained_{name}.pt",weights_only=False)
+            # # Load lại model
+            if "NBEATS" in model_data["model"][name]:
+                reg_model[name].model = NBEATSModel.load(model_data["model"][name],weights_only=False)
+            elif "TFT" in model_data["model"][name]:
+                reg_model[name].model = TFTModel.load(model_data["model"][name],weights_only=False)
+            elif "TRANSFORMER" in model_data["model"][name]:
+                reg_model[name].model = TransformerModel.load(model_data["model"][name],weights_only=False)
         
         
         scaler_x[name] = joblib.load(model_data["scaler"][name]["x"])
@@ -102,7 +105,6 @@ def gen_feature_importance(stations, model_data, feature):
 
 @st.cache_resource
 def gen_evaluate_metrics(stations, model_data, output_data):
-    _, scaler_x, scaler_y                    = gen_model_data(stations, model_data)
     station_fit, station_valid, station_pred = gen_model_output(stations, output_data)
     
     r2 = dict({"train" : dict(),
@@ -277,7 +279,6 @@ def gen_actual_vs_predict(csv_path):
 
         st.plotly_chart(fig, use_container_width=True)
                 
-
 def gen_summary(stations, output_data, avp):
     for name in stations:
         with st.expander(label    = name,
@@ -294,12 +295,143 @@ def gen_summary(stations, output_data, avp):
                              expanded = False):
                 if avp:
                     gen_actual_vs_predict(output_data[name][".csv"]["test"])
+
+def _metric_orientation(metric_name):
+    return False if metric_name == "R2" else True
+
+def gen_periodic_metric_ranking(stations, output_data, metrics, cycle_types=None):
+    if not metrics:
+        st.info("Chưa chọn metrics để ranking.")
+        return
+
+    if not cycle_types:
+        st.info("Chưa chọn chu kỳ thời gian để ranking.")
+        return
+
+    rows = []
+
+    for station in stations:
+        test_path = output_data[station][".csv"]["test"]
+        df = pd.read_csv(test_path)
+
+        if not {"time", "y_true", "y_pred"}.issubset(df.columns):
+            continue
+
+        df["time"] = pd.to_datetime(df["time"], errors="coerce")
+        df = df.dropna(subset=["time", "y_true", "y_pred"]).copy()
+        if df.empty:
+            continue
+
+        df["weekday"] = df["time"].dt.day_name()
+        df["quarter"] = "Q" + df["time"].dt.quarter.astype(str)
+        df["month"]   = df["time"].dt.month
+        print(df)
+        cycle_map = {
+            "weekday": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "quarter": ["Q1", "Q2", "Q3", "Q4"],
+            "month": list(range(1, 13)),
+        }
+
+        for cycle_type in cycle_types:
+            if cycle_type not in cycle_map:
+                continue
+
+            ordered_values = cycle_map[cycle_type]
+            for cycle_value in ordered_values:
+                g = df[df[cycle_type] == cycle_value]
+                if g.empty:
+                    continue
+
+                row = {
+                    "cycle_type": cycle_type,
+                    "cycle": cycle_value,
+                    "station": station,
+                    "samples": len(g),
+                }
+
+                y_true = g["y_true"]
+                y_pred = g["y_pred"]
+
+                if "R2" in metrics:
+                    row["R2"] = r2_score(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average") * 100
+                if "MAE" in metrics:
+                    row["MAE"] = mean_absolute_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
+                if "MSE" in metrics:
+                    row["MSE"] = mean_squared_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
+                if "RMSE" in metrics:
+                    row["RMSE"] = root_mean_squared_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
+                if "MAPE" in metrics:
+                    row["MAPE"] = mean_absolute_percentage_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
+
+                rows.append(row)
+
+    ranking = pd.DataFrame(rows)
+    if ranking.empty:
+        st.info("Không đủ dữ liệu để tạo ranking theo chu kỳ đã chọn.")
+        return
+
+    ranking["cycle"] = ranking.apply(
+        lambda r: f"M{int(r['cycle']):02d}" if r["cycle_type"] == "month" else r["cycle"],
+        axis=1,
+    )
+
+    rank_cols = []
+    for metric_name in metrics:
+        if metric_name not in ranking.columns:
+            continue
+
+        ascending = _metric_orientation(metric_name)
+        rank_col = f"rank_{metric_name}"
+        ranking[rank_col] = ranking.groupby(["cycle_type", "cycle"])[metric_name].rank(
+            ascending=ascending,
+            method="min"
+        )
+        rank_cols.append(rank_col)
+
+    if rank_cols:
+        ranking["rank_score"] = ranking[rank_cols].mean(axis=1)
+        ranking["rank_overall"] = ranking.groupby(["cycle_type", "cycle"])["rank_score"].rank(
+            ascending=True,
+            method="min",
+        )
+    else:
+        ranking["rank_score"] = np.nan
+        ranking["rank_overall"] = np.nan
+
+    for metric_name in metrics:
+        if metric_name in ranking.columns:
+            digits = 4 if metric_name != "R2" else 4
+            ranking[metric_name] = ranking[metric_name].round(digits)
+
+    if "rank_score" in ranking.columns:
+        ranking["rank_score"] = ranking["rank_score"].round(3)
+
+    for col in ["samples", "rank_overall"] + rank_cols:
+        if col in ranking.columns:
+            ranking[col] = ranking[col].astype("Int64")
+
+    ranking = ranking.sort_values(["cycle_type", "cycle", "rank_overall", "station"])
+    st.dataframe(ranking)
             
-def process(model, stations, charts, metrics, feature):
+def process(model, stations, charts, metrics, feature, cycle_ranking=None):
     output_data = httpx.get("http://127.0.0.1:8000/stations/model_predict").json()[model]
     model_data  = httpx.get("http://127.0.0.1:8000/models/all").json()[model]
+
+    cycle_label_map = {
+        "Theo quý": "quarter",
+        "Theo thứ": "weekday",
+        "Theo tháng": "month",
+    }
+    selected_cycles = []
+    for cycle in (cycle_ranking or []):
+        if cycle in ["quarter", "weekday", "month"]:
+            selected_cycles.append(cycle)
+        elif cycle in cycle_label_map:
+            selected_cycles.append(cycle_label_map[cycle])
     
     gen_metric_dataframe(stations, model_data, output_data, metrics)
+
+    gen_periodic_metric_ranking(stations, output_data, metrics, selected_cycles)
     
     if "Feature Importance" in charts:
         gen_feature_importance(stations, model_data, feature)

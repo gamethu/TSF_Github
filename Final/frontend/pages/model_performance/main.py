@@ -14,6 +14,7 @@ def display():
                "Feature Importance",
                "Partial Dependence Plots"]
     metric  = ["R2", "MAE", "MSE", "RMSE", "MAPE"]
+    cycle_opts = ["quarter", "weekday", "month"]
     
     with st.sidebar:
         with st.container(border=True):
@@ -31,6 +32,7 @@ def display():
                                           default     = target,
                                           placeholder = "Choose your station")
             charts = None
+            cycle_ranking = None
             if stations:
                 charts = st.multiselect(label       = "Charts",
                                         options     = chart,
@@ -42,6 +44,10 @@ def display():
                                              options     = metric,
                                              default     = metric,
                                              placeholder = "Choose your metrics")
+                    cycle_ranking = st.multiselect(label       = "Cycle Ranking",
+                                                   options     = cycle_opts,
+                                                   default     = cycle_opts,
+                                                   placeholder = "Choose cycle ranking")
                 
             submitted = st.button("Submit")
         
@@ -49,6 +55,6 @@ def display():
         if model is None or stations is None or charts is None:
             st.warning("Please provide all requirement")
         else: 
-            model_performance.process(model, stations, charts, metrics, feature)
+            model_performance.process(model, stations, charts, metrics, feature, cycle_ranking)
     
 display()

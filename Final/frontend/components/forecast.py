@@ -8,6 +8,9 @@ import plotly.express as px
 import sys
 import os
 from pathlib import Path
+from darts.models.forecasting.nbeats import NBEATSModel
+from darts.models.forecasting.transformer_model import TransformerModel
+from darts.models.forecasting.tft_model import TFTModel
 
 # Make Drafts/Temp Prediction importable regardless of CWD or spaces in path
 repo_root = Path(__file__).resolve().parents[3]
@@ -27,8 +30,20 @@ def gen_result(df, model_list, start, end, feature):
 
     for name, model_pack in model_list.items():
         scaler_x = joblib.load(model_pack["scaler"]["x"])
-        model    = joblib.load(model_pack["model"])
         scaler_y = joblib.load(model_pack["scaler"]["y"])
+
+        if "wrapper" in model_pack:
+            model = joblib.load(model_pack["wrapper"])
+            model_path = str(model_pack["model"])
+
+            if "NBEATS" in model_path:
+                model.model = NBEATSModel.load(model_path, weights_only=False)
+            elif "TFT" in model_path:
+                model.model = TFTModel.load(model_path, weights_only=False)
+            elif "TRANSFORMER" in model_path:
+                model.model = TransformerModel.load(model_path, weights_only=False)
+        else:
+            model = joblib.load(model_pack["model"])
 
         X = scaler_x.transform(pred_df[feature])
         y_pred = model.predict(X).reshape(-1, 1)
@@ -56,6 +71,8 @@ def process(stations, models, filter, feature):
     for m in models:
         model_list[m] = {"model"  : all_models[m]["model"][stations],
                          "scaler" : all_models[m]["scaler"][stations]}
+        if "wrapper" in all_models[m]:
+            model_list[m]["wrapper"] = all_models[m]["wrapper"][stations]
     
     df           = pd.read_csv(data)
     df["time"]   = pd.to_datetime(df["time"])
@@ -74,8 +91,6 @@ def process(stations, models, filter, feature):
     df["MONTH"] = df.index.month
     df["DAY"]   = df.index.day
     st.dataframe(df[start:end])
-    
-    st.write(model_list)
     
     gen_result(df, model_list, start, end, feature)
     

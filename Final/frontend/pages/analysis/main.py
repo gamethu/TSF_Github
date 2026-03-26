@@ -20,6 +20,8 @@ def display():
                                    options     = httpx.get("http://127.0.0.1:8000/stations/name").json(),
                                    key         = "station",
                                    placeholder = "Choose your station")
+            # with st.expander("MAP", expanded=True):
+            analysis.render_station_geopandas_map(station)
             targets = None
             if station:
                 targets = st.multiselect(label      = "Target",
