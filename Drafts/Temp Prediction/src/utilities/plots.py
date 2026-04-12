@@ -56,6 +56,7 @@ def plot_Outlier(data, data_cols, target=None):
         # axes[i, 1].set_xlabel(column)
         axes[i, 1].grid(True)
 
+    plt.savefig(f"../edas/boxplot/outlier_plot.png", dpi=300, bbox_inches='tight')
     plt.tight_layout()
     plt.show()
 def plot_feature_trends_over_time(data, data_cols, 
@@ -397,14 +398,14 @@ def make_mi_scores(features, target, random_state, type):
     mi_scores = pd.Series(mi_scores, name="MI Scores", index=features.columns)
     mi_scores = mi_scores.sort_values(ascending=False)
     return mi_scores
-def plot_mi_scores(scores, label=None):
+def plot_mi_scores(scores, label=None, ax=None):
     import matplotlib.pyplot as plt
     import seaborn as sns
     import numpy as np
 
     # Sắp xếp tăng dần để vẽ barh (thanh ngang)
     scores = scores.sort_values(ascending=True)
-    plt.figure(figsize=(16, 9))
+    # plt.figure(figsize=(16, 9))
     plt.grid(False)
 
     # 🏷️ Tiêu đề
@@ -412,7 +413,10 @@ def plot_mi_scores(scores, label=None):
               fontweight="bold", va="center", pad=20, fontsize=20)
 
     # 🎯 Giảm độ dày cột
-    ax = sns.barplot(x=scores.values, y=scores.index, width=0.5, color="#1f77b4", label=label)
+    if ax is None:
+        ax = sns.barplot(x=scores.values, y=scores.index, width=0.5, color="#1f77b4", label=label)
+    else:
+        sns.barplot(x=scores.values, y=scores.index, width=0.5, color="#1f77b4", label=label, ax=ax)
 
     # 📈 Đưa trục X lên trên
     ax.xaxis.set_ticks_position('top')
@@ -445,7 +449,8 @@ def plot_mi_scores(scores, label=None):
     ax.tick_params(axis='x', labelsize=16)
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    return ax
 
 def evaluate_feature_outliers_over_time(data, data_cols,
                                     station_name      = None,
@@ -1937,6 +1942,7 @@ def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
         ax.set_xlabel("Kinh độ", fontsize=12)
         ax.set_ylabel("Vĩ độ", fontsize=12)
         ax.tick_params(axis="both", which="major", labelsize=12)
+        plt.savefig(f"../edas/geochart/influence_of_latitude_in_{feature_name}.png", dpi=300, bbox_inches="tight")
         ax.plot()
 
 def plot_influence_of_latitude_in_features(data, df_provinces,
@@ -2089,10 +2095,10 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               )
         
         # Option 11
-        if "wind_speed_ave" in features:
+        if "ws_ave" in features:
             plot_influence_of_latitude_in_col(data         = df_filtered,
                                               df_provinces = df_provinces,
-                                              data_cols    = "wind_speed_ave",
+                                              data_cols    = "ws_ave",
                                               feature_name = "tốc độ gió trung bình",
                                               unit         = "m/s",
                                               display      = False,
@@ -2100,10 +2106,10 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               )
         
         # Option 12
-        if "wind_direction_deg_ave" in features:
+        if "wd_ave" in features:
             plot_influence_of_latitude_in_col(data         = df_filtered,
                                               df_provinces = df_provinces,
-                                              data_cols    = "wind_direction_deg_ave",
+                                              data_cols    = "wd_ave",
                                               feature_name = "hướng gió trung bình",
                                               unit         = "°",
                                               display      = False,
@@ -2222,10 +2228,10 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               )
 
         # Option 11
-        if "wind_speed_ave" in features:
+        if "ws_ave" in features:
             plot_influence_of_latitude_in_col(data         = df_filtered,
                                               df_provinces = df_provinces,
-                                              data_cols    = "wind_speed_ave",
+                                              data_cols    = "ws_ave",
                                               feature_name = "tốc độ gió trung bình",
                                               unit         = "m/s",
                                               display      = display,
@@ -2233,10 +2239,10 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               )
 
         # Option 12
-        if "wind_direction_deg_ave" in features:
+        if "wd_ave" in features:
             plot_influence_of_latitude_in_col(data         = df_filtered,
                                               df_provinces = df_provinces,
-                                              data_cols    = "wind_direction_deg_ave",
+                                              data_cols    = "wd_ave",
                                               feature_name = "hướng gió trung bình",
                                               unit         = "°",
                                               display      = display,
@@ -2267,6 +2273,7 @@ def plot_correlation_matrix_in_station(data, data_cols,
         plt.title(f'Tương quan {feature_name} giữa các trạm khí tượng')
         plt.xlabel("Trạm khí tượng")
         plt.ylabel("Trạm khí tượng")
+        plt.savefig(f"../edas/heatmap/correlation_matrix_in_{feature_name}.png", dpi=300, bbox_inches="tight")
         plt.show()
 
 def plot_correlation_matrix_in_stations(data, 
@@ -2398,18 +2405,18 @@ def plot_correlation_matrix_in_stations(data,
                                                )
         
         # Option 11
-        if "wind_speed_ave" in features:
+        if "ws_ave" in features:
             plot_correlation_matrix_in_station(data         = df_filtered,
-                                               data_cols    = "wind_speed_ave",
+                                               data_cols    = "ws_ave",
                                                feature_name = "tốc độ gió trung bình",
                                                display      = False,
                                                # ax           = None
                                                )
         
         # Option 12
-        if "wind_direction_deg_ave" in features:
+        if "wd_ave" in features:
             plot_correlation_matrix_in_station(data         = df_filtered,
-                                               data_cols    = "wind_direction_deg_ave",
+                                               data_cols    = "wd_ave",
                                                feature_name = "hướng gió trung bình",
                                                display      = False,
                                                # ax           = None
@@ -2506,18 +2513,18 @@ def plot_correlation_matrix_in_stations(data,
                                                )
         
         # Option 11
-        if "wind_speed_ave" in features:
+        if "ws_ave" in features:
             plot_correlation_matrix_in_station(data         = df_filtered,
-                                               data_cols    = "wind_speed_ave",
+                                               data_cols    = "ws_ave",
                                                feature_name = "tốc độ gió trung bình",
                                                display      = display,
                                                # ax           = axes[4,1]
                                                )
         
         # Option 12
-        if "wind_direction_deg_ave" in features:
+        if "wd_ave" in features:
             plot_correlation_matrix_in_station(data         = df_filtered,
-                                               data_cols    = "wind_direction_deg_ave",
+                                               data_cols    = "wd_ave",
                                                feature_name = "hướng gió trung bình",
                                                display      = display,
                                                # ax           = axes[5,0]
@@ -3090,6 +3097,7 @@ def plot_trend_of_month_of_targets(data, station, station_name,
         axes.set_ylabel("Giai đoạn")
         axes.tick_params(axis='y', rotation=0)
         
+        plt.savefig(f"../edas/heatmap/trend_of_month_of_targets_{station}.png", dpi=300, bbox_inches='tight')
         plt.tight_layout()
         plt.show()
 
@@ -3115,8 +3123,8 @@ def plot_trend_of_month_of_features(data, station, station_name,
         "sp_ave": "mean",
         "tcc_ave": "mean",
         "tp_sum": "sum",
-        "wind_speed_ave": "mean",
-        "wind_direction_deg_ave": "mean"
+        "ws_ave": "mean",
+        "wd_ave": "mean"
     })
 
     # Thêm cột năm và tháng
@@ -3148,8 +3156,8 @@ def plot_trend_of_month_of_features(data, station, station_name,
         "sp_ave": {"label": "Áp suất bề mặt trung bình", "unit": "kPa"},
         "tcc_ave": {"label": "Độ che phủ mây trung bình", "unit": "%"},
         "tp_sum": {"label": "Lượng mưa tích lũy", "unit": "mm"},
-        "wind_speed_ave": {"label": "Tốc độ gió trung bình", "unit": "m/s"},
-        "wind_direction_deg_ave": {"label": "Hướng gió trung bình", "unit": "°"}
+        "ws_ave": {"label": "Tốc độ gió trung bình", "unit": "m/s"},
+        "wd_ave": {"label": "Hướng gió trung bình", "unit": "°"}
     }
     
     periods = ["1990-2000", "2001-2010", "2011-2016", "2017-2024"]
@@ -3183,6 +3191,7 @@ def plot_trend_of_month_of_features(data, station, station_name,
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             ax.set_xticks(range(1, 13))        
     if display is True:
+        plt.savefig(f"../edas/lineplot/trend_of_month_of_features_{station}.png", dpi=300, bbox_inches='tight')
         plt.tight_layout()
         plt.show()
 
