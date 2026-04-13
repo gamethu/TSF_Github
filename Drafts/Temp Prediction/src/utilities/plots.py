@@ -8,6 +8,7 @@ def plot_Outlier(data, data_cols, target=None):
     - Nếu có target: hiển thị theo class
     - Nếu không có: hiển thị phân phối và boxplot thông thường
     """
+    import os
     import seaborn as sns
     import matplotlib.pyplot as plt
 
@@ -56,7 +57,9 @@ def plot_Outlier(data, data_cols, target=None):
         # axes[i, 1].set_xlabel(column)
         axes[i, 1].grid(True)
 
+    os.makedirs("../edas/boxplot", exist_ok=True)
     plt.savefig(f"../edas/boxplot/outlier_plot.png", dpi=300, bbox_inches='tight')
+
     plt.tight_layout()
     plt.show()
 def plot_feature_trends_over_time(data, data_cols, 
@@ -408,9 +411,9 @@ def plot_mi_scores(scores, label=None, ax=None):
     # plt.figure(figsize=(16, 9))
     plt.grid(False)
 
-    # 🏷️ Tiêu đề
-    plt.title("MỨC ĐỘ TƯƠNG QUAN THEO THÔNG TIN TƯƠNG HỖ",
-              fontweight="bold", va="center", pad=20, fontsize=20)
+    # # 🏷️ Tiêu đề
+    # plt.title("MỨC ĐỘ TƯƠNG QUAN THEO THÔNG TIN TƯƠNG HỖ",
+    #           fontweight="bold", va="center", pad=20, fontsize=20)
 
     # 🎯 Giảm độ dày cột
     if ax is None:
@@ -1869,6 +1872,7 @@ def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
                                       unit         = "°C",
                                       display      = False,
                                       ax           = None):
+    import os
     import geopandas as gpd
     import matplotlib.pyplot as plt
     # Tạo GeoDataFrame và gán region trong một bước
@@ -1942,6 +1946,8 @@ def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
         ax.set_xlabel("Kinh độ", fontsize=12)
         ax.set_ylabel("Vĩ độ", fontsize=12)
         ax.tick_params(axis="both", which="major", labelsize=12)
+
+        os.makedirs("../edas/geochart", exist_ok=True)
         plt.savefig(f"../edas/geochart/influence_of_latitude_in_{feature_name}.png", dpi=300, bbox_inches="tight")
         ax.plot()
 
@@ -2253,6 +2259,7 @@ def plot_correlation_matrix_in_station(data, data_cols,
                                        feature_name = None,
                                        display      = False,
                                        ax           = None):
+    import os
     import seaborn as sns
     import matplotlib.pyplot as plt
     correlation_matrix = data.pivot_table(index="time", columns="NAME", values=data_cols).corr(method="pearson")
@@ -2273,6 +2280,8 @@ def plot_correlation_matrix_in_station(data, data_cols,
         plt.title(f'Tương quan {feature_name} giữa các trạm khí tượng')
         plt.xlabel("Trạm khí tượng")
         plt.ylabel("Trạm khí tượng")
+
+        os.makedirs("../edas/heatmap", exist_ok=True)
         plt.savefig(f"../edas/heatmap/correlation_matrix_in_{feature_name}.png", dpi=300, bbox_inches="tight")
         plt.show()
 
@@ -3017,6 +3026,7 @@ def plot_trend_of_year_of_all_data(data,
 def plot_trend_of_month_of_targets(data, station, station_name,
                                    display = False,
                                    ax      = None):
+    import os
     import pandas as pd
     import matplotlib.pyplot as plt
     import seaborn as sns    
@@ -3097,6 +3107,7 @@ def plot_trend_of_month_of_targets(data, station, station_name,
         axes.set_ylabel("Giai đoạn")
         axes.tick_params(axis='y', rotation=0)
         
+        os.makedirs("../edas/heatmap", exist_ok=True)
         plt.savefig(f"../edas/heatmap/trend_of_month_of_targets_{station}.png", dpi=300, bbox_inches='tight')
         plt.tight_layout()
         plt.show()
@@ -3106,6 +3117,7 @@ def plot_trend_of_month_of_targets(data, station, station_name,
 def plot_trend_of_month_of_features(data, station, station_name,
                                     display = False,
                                     ax      = None):
+    import os
     import pandas as pd
     import matplotlib.pyplot as plt
     import seaborn as sns    
@@ -3191,6 +3203,7 @@ def plot_trend_of_month_of_features(data, station, station_name,
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             ax.set_xticks(range(1, 13))        
     if display is True:
+        os.makedirs("../edas/lineplot", exist_ok=True)
         plt.savefig(f"../edas/lineplot/trend_of_month_of_features_{station}.png", dpi=300, bbox_inches='tight')
         plt.tight_layout()
         plt.show()
