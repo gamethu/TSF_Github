@@ -1934,7 +1934,7 @@ def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
         # Vẽ nhãn
         ax.text(x        = station_point.LONGITUDE + 0.3, 
                 y        = station_point.LATITUDE,
-                s        = f"{station}: ({temp_avg:.4f}{unit})",
+                s        = f"{station}\n({temp_avg:.4f}{unit})",
                 fontsize = 12,
                 ha       = "left",
                 va       = "bottom",
@@ -1942,10 +1942,11 @@ def plot_influence_of_latitude_in_col(data, df_provinces, data_cols,
         
     if display is True:
         ax.set_title(f"Ảnh hưởng của vĩ độ đến {feature_name} tại các trạm khí tượng",
-                     fontsize=12, loc="center")
-        ax.set_xlabel("Kinh độ", fontsize=12)
-        ax.set_ylabel("Vĩ độ", fontsize=12)
+                     fontsize=12, loc="center", weight="bold")
+        ax.set_xlabel("Kinh độ", fontsize=12, weight="bold")
+        ax.set_ylabel("Vĩ độ", fontsize=12, weight="bold")
         ax.tick_params(axis="both", which="major", labelsize=12)
+        ax.grid(True, alpha=0.3)
 
         os.makedirs("../edas/geochart", exist_ok=True)
         plt.savefig(f"../edas/geochart/influence_of_latitude_in_{feature_name}.png", dpi=300, bbox_inches="tight")
@@ -2041,7 +2042,7 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               df_provinces = df_provinces,
                                               data_cols    = "RH_ave",
                                               feature_name = "độ ẩm trung bình",
-                                              unit         = "°C",
+                                              unit         = "%",
                                               display      = False,
                                               # ax           = None
                                               )  
@@ -2062,7 +2063,7 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               df_provinces = df_provinces,
                                               data_cols    = "RH_max",
                                               feature_name = "độ ẩm cực đại",
-                                              unit         = "°C",
+                                              unit         = "%",
                                               display      = False,
                                               # ax           = None
                                               )
@@ -2173,7 +2174,7 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               df_provinces = df_provinces,
                                               data_cols    = "RH_ave",
                                               feature_name = "độ ẩm tương đối trung bình",
-                                              unit         = "°C",
+                                              unit         = "%",
                                               display      = display,
                                             #   ax           = axes[0]
                                             )  
@@ -2184,7 +2185,7 @@ def plot_influence_of_latitude_in_features(data, df_provinces,
                                               df_provinces = df_provinces,
                                               data_cols    = "RH_max",
                                               feature_name = "độ ẩm tương đối cực đại",
-                                              unit         = "°C",
+                                              unit         = "%",
                                               display      = display,
                                             #   ax           = axes[1]
                                               )
@@ -2635,8 +2636,8 @@ def plot_trend_of_year_of_features(data, station, station_name,
                                                     "sp_ave": "mean",
                                                     "tcc_ave": "mean",
                                                     "tp_sum": "mean",
-                                                    "wind_speed_ave": "mean",
-                                                    "wind_direction_deg_ave": "mean"
+                                                    "ws_ave": "mean",
+                                                    "wd_ave": "mean"
                                                     }).reset_index()
 
     if display is True:
@@ -2721,7 +2722,7 @@ def plot_trend_of_year_of_features(data, station, station_name,
                  markersize = 4)
         
         ax3.plot(yearly_data["YEAR"], 
-                 yearly_data["wind_speed_ave"], 
+                 yearly_data["ws_ave"], 
                  color      = "orange", 
                  marker     = "x", 
                  linewidth  = 2, 
@@ -2735,7 +2736,7 @@ def plot_trend_of_year_of_features(data, station, station_name,
         ax4 = ax1.twinx()
         ax4.spines['right'].set_position(('outward', 120))
         ax4.plot(yearly_data["YEAR"], 
-                 yearly_data["wind_direction_deg_ave"], 
+                 yearly_data["wd_ave"], 
                  color      = "pink", 
                  marker     = "^", 
                  linewidth  = 2, 

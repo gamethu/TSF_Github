@@ -4,7 +4,7 @@ from datetime import date
 import httpx
 
 def display():
-    target  = httpx.get("http://127.0.0.1:8000/stations/name").json()
+    station  = httpx.get("http://127.0.0.1:8000/stations/name").json()
     feature = list(['YEAR', 'MONTH', 'DAY',
                     'Nina_index', 'DEW_ave', 'TEMP_ave', 'RH_ave', 
                     'DEW_max', 'RH_max',
@@ -28,8 +28,8 @@ def display():
             stations = None
             if model:
                 stations = st.multiselect(label      = "Station",
-                                          options     = target,
-                                          default     = target,
+                                          options     = station,
+                                          default     = station,
                                           placeholder = "Choose your station")
             charts = None
             cycle_ranking = None

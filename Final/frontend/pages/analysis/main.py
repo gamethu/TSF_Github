@@ -22,7 +22,7 @@ def display():
                                      key         = "station",
                                      placeholder = "Choose your station")
             # with st.expander("MAP", expanded=True):
-            analysis.render_station_geopandas_map(tuple(station))
+            analysis.render_station_geopandas_map(station)
             targets = None
             if station:
                 targets = st.multiselect(label      = "Target",

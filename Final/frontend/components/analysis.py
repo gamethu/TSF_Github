@@ -1,12 +1,9 @@
 import streamlit as st
 import httpx
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from plotly.colors import qualitative
 from pathlib import Path
 
 NORMALIZED_STATION_NAME = {
@@ -18,6 +15,15 @@ NORMALIZED_STATION_NAME = {
     "CaMau": "Cà Mau",
 }
 
+CODE_TO_NAME = {
+    "NB": "NOI BAI",
+    "TH": "THANH HOA",
+    "DH": "DONG HOI",
+    "QN": "QUY NHON",
+    "TSN": "TSN",
+    "CaMau": "CA MAU",
+}
+
 def _normalize_station_codes(station):
     if station is None:
         return []
@@ -25,358 +31,207 @@ def _normalize_station_codes(station):
         return [s for s in station if s]
     return [station]
 
-def load_station_summary():
-    stations = httpx.get("http://127.0.0.1:8000/stations/all").json()
-    records = []
+@st.cache_data
+def load_station_summary(stations, filter=None):
+    dfs = []
+
     for station, csv_path in stations.items():
-        df = pd.read_csv(csv_path)
-        records.append(
-            {
-                "station": station,
-                "name": NORMALIZED_STATION_NAME.get(station, station),
-                "latitude": float(df["LATITUDE"].iloc[0]),
-                "longitude": float(df["LONGITUDE"].iloc[0]),
-            }
-        )
-    return pd.DataFrame(records)
+        df = pd.read_csv(csv_path, parse_dates=["time"]).set_index("time")
+        if filter is not None:
+            df = df.loc[filter[0]:filter[1]]
+        dfs.append(df)
 
+    return pd.concat(dfs)
 
-def _selected_station_code_set(selected_stations):
-    station_codes = _normalize_station_codes(selected_stations)
-    return set(station_codes) if station_codes else None
+def prepare_monthly_station_data(df, features, target_col, selected_stations=None):
+    selected_names = [CODE_TO_NAME.get(s, s) for s in selected_stations]
+    # selected_rows  = gdf[gdf["NAME"].isin(selected_names)]
+    df = df[df["NAME"].isin(selected_names)]
 
-def prepare_monthly_station_data(date_filter, target_col, selected_stations=None):
-    start, end  = date_filter
-    stations    = httpx.get("http://127.0.0.1:8000/stations/all").json()
     month_index = pd.Index(range(1, 13), name="month")
-    selected_station_code_set = _selected_station_code_set(selected_stations)
 
-    monthly_temp_df      = pd.DataFrame(index=month_index)
-    monthly_rain_days_df = pd.DataFrame(index=month_index)
+    # ===== TEMP =====
+    temp_df = (df.groupby([df.index.month, "NAME"])[target_col]
+                 .mean()
+                 .unstack()
+                 .reindex(month_index))
 
-    for station_code, csv_path in stations.items():
-        if selected_station_code_set is not None and station_code not in selected_station_code_set:
-            continue
+    # ===== RAIN =====
+    mean_dict = (
+        df.groupby([df.index.month, "NAME"])[features]
+        .mean()
+        .mean()
+        .to_dict()
+    )
+    daily = df.groupby("NAME")[features].resample("D").mean().reset_index()
 
-        station_name = NORMALIZED_STATION_NAME.get(station_code, station_code)
+    count_dict = {}
 
-        # ================== TEMPERATURE / TARGET ==================
-        station_df = pd.read_csv(csv_path, usecols=["time", target_col])
-        station_df["time"] = pd.to_datetime(station_df["time"], errors="coerce")
-        station_df = station_df.dropna(subset=["time", target_col]).set_index("time")
-        station_df = station_df.loc[start:end]
+    for col in features:
+        if col == "tp_sum":
+            # mưa: > 0
+            count = (daily[col] > 0).sum()
+        else:
+            # feature khác: có giá trị (not null)
+            count = daily[col].notna().sum()
 
-        monthly_mean = station_df[target_col].groupby(station_df.index.month).mean()
-        monthly_temp_df[station_name] = monthly_mean.reindex(month_index)
+        count_dict[col] = int(count)
 
-        # ================== RAIN DAYS ==================
-        # kiểm tra có cột tp_sum không
-        station_columns = pd.read_csv(csv_path, nrows=0).columns
-        if "tp_sum" not in station_columns:
-            monthly_rain_days_df[station_name] = pd.Series(0, index=month_index)
-            continue
-
-        rain_df = pd.read_csv(csv_path, usecols=["time", "tp_sum"])
-        rain_df["time"] = pd.to_datetime(rain_df["time"], errors="coerce")
-        rain_df["tp_sum"] = pd.to_numeric(rain_df["tp_sum"], errors="coerce")
-        rain_df = rain_df.dropna(subset=["time", "tp_sum"]).set_index("time")
-        rain_df = rain_df.loc[start:end]
-
-        # ✅ QUAN TRỌNG: gom theo ngày trước
-        rain_df_daily = rain_df.resample("D").sum()
-
-        # lọc ngày có mưa
-        rainy_days = rain_df_daily[rain_df_daily["tp_sum"] > 0]
-
-        # đếm số ngày mưa theo tháng
-        rainy_month_counts = rainy_days.groupby(rainy_days.index.month).size()
-
-        monthly_rain_days_df[station_name] = (rainy_month_counts.reindex(month_index).fillna(0))
-
-    # fill NA
-    monthly_temp_df = monthly_temp_df.fillna(0)
-    monthly_rain_days_df = monthly_rain_days_df.fillna(0)
-
-    return monthly_temp_df, monthly_rain_days_df
+    return temp_df.fillna(0), mean_dict, count_dict
 
 @st.cache_resource
-def render_monthly_station_metrics(date_filter, target_col, selected_stations=None):
-    monthly_temp_df, monthly_rain_days_df = prepare_monthly_station_data(
-        date_filter=date_filter,
+def render_monthly_station_metrics(df, features, target_col, selected_stations=None):
+    temp_df, mean_dict, count_dict = prepare_monthly_station_data(
+        df=df,
+        features=features,
         target_col=target_col,
         selected_stations=selected_stations,
     )
-    temp_sum       = monthly_temp_df.sum(axis=1)
-    rainy_days_sum = monthly_rain_days_df.sum().sum()
-    metric_cols    = st.columns(3)
 
-    metric_cols[0].metric("Tổng lượng nhiệt", f"{temp_sum.sum():.1f}")
+    temp_sum       = temp_df.sum(axis=1).sum()
+    rainy_days_sum = count_dict["tp_sum"]
+    
+    metric_cols = st.columns(3)
+    metric_cols[0].metric("Tổng lượng nhiệt", f"{temp_sum:.1f}")
     metric_cols[1].metric("Số ngày có mưa", f"{rainy_days_sum}")
-    metric_cols[2].metric("Số thành phố", f"{monthly_temp_df.shape[1]}")
+    metric_cols[2].metric("Số thành phố", f"{temp_df.shape[1]}")
 
 @st.cache_resource
-def render_monthly_contribution_charts(date_filter, target_col, selected_stations=None):
-    monthly_temp_df, _ = prepare_monthly_station_data(
-        date_filter=date_filter,
-        target_col=target_col,
-        selected_stations=selected_stations,
-    )
-    palette      = qualitative.Plotly
-
-    station_total = monthly_temp_df.sum(axis=0)
-    grand_total = float(station_total.sum())
-    if grand_total > 0:
-        station_share_pct = (station_total / grand_total * 100.0).round(2)
-    else:
-        station_share_pct = pd.Series(0.0, index=station_total.index)
-
-    station_share_df = pd.DataFrame(
-        {
-            "station": station_share_pct.index,
-            "station_total": station_total.values,
-            "share_pct": station_share_pct.values,
-        }
-    ).sort_values("share_pct", ascending=True)
-
-    fig_month_share = go.Figure()
-    fig_month_share.add_bar(
-        x=station_share_df["share_pct"],
-        y=station_share_df["station"],
-        orientation="h",
-        marker={"color": "#2563eb"},
-        text=[f"{v:.1f}%" for v in station_share_df["share_pct"]],
-        textposition="outside",
-        customdata=np.column_stack([station_share_df["station_total"]]),
-        hovertemplate="%{y}<br>% đóng góp: %{x:.2f}%<br>Tổng nhiệt khu vực: %{customdata[0]:.2f}<extra></extra>",
-        name="% đóng góp theo khu vực",
-    )
-    fig_month_share.update_layout(
-        title=f"% đóng góp của khu vực trên tổng lượng nhiệt",
-        xaxis_title="Phần trăm đóng góp (%)",
-        yaxis_title="Tháng",
-        showlegend=False,
-    )
-
-    # ========== BARCHART NGANG STACK: trong mỗi tháng từng khu vực góp bao nhiêu % ==========
-    month_sum = monthly_temp_df.sum(axis=1).replace(0, np.nan)
-    station_share_pct_df = monthly_temp_df.div(month_sum, axis=0).mul(100).fillna(0)
-    station_share_pct_df.index = [f"Tháng {m}" for m in station_share_pct_df.index]
-
-    station_color_map = {
-        station_name: palette[idx % len(palette)]
-        for idx, station_name in enumerate(station_share_pct_df.columns)
-    }
-
-    fig_month_share.data = ()
-    fig_month_share.add_bar(
-        x=station_share_df["share_pct"],
-        y=station_share_df["station"],
-        orientation="h",
-        marker={"color": [station_color_map.get(s, "#2563eb") for s in station_share_df["station"]]},
-        text=[f"{v:.1f}%" for v in station_share_df["share_pct"]],
-        textposition="outside",
-        customdata=np.column_stack([station_share_df["station_total"]]),
-        hovertemplate="%{y}<br>% đóng góp: %{x:.2f}%<br>Tổng nhiệt khu vực: %{customdata[0]:.2f}<extra></extra>",
-        name="% đóng góp theo khu vực",
-    )
-
-    fig_station_share = go.Figure()
-    for idx, station_name in enumerate(station_share_pct_df.columns):
-        station_color = station_color_map[station_name]
-        fig_station_share.add_bar(
-            x=station_share_pct_df[station_name],
-            y=station_share_pct_df.index,
-            orientation="h",
-            name=station_name,
-            marker={"color": station_color},
-            customdata=np.column_stack([monthly_temp_df[station_name].values]),
-            hovertemplate=(
-                "%{y}<br>Trạm: " + station_name +
-                "<br>% đóng góp: %{x:.2f}%<br>Tổng lượng nhiệt trong tháng của khu vực đó: %{customdata[0]:.2f}<extra></extra>"
-            ),
-        )
-
-    fig_station_share.update_layout(
-        barmode="stack",
-        title=f"Trong mỗi tháng, từng khu vực đóng góp bao nhiêu %",
-        xaxis_title="Tỷ trọng trong tháng (%)",
-        yaxis_title="Tháng",
-        xaxis={"range": [0, 100]},
-        legend_title="Thành phố",
-    )
-
-    col_left, col_right = st.columns(2)
-    with col_left:
-        st.plotly_chart(fig_month_share, use_container_width=True, key=f"monthly_share_pct_{target_col}")
-    with col_right:
-        st.plotly_chart(fig_station_share, use_container_width=True, key=f"station_share_pct_{target_col}")
-
-@st.cache_resource
-def render_monthly_station_chart(date_filter, target_col="TEMP_max", selected_stations=None):
-    monthly_temp_df, monthly_rain_days_df = prepare_monthly_station_data(
-        date_filter=date_filter,
+def render_monthly_contribution_charts(df, features, target_col, selected_stations):
+    temp_df, _, _ = prepare_monthly_station_data(
+        df=df,
+        features=features,
         target_col=target_col,
         selected_stations=selected_stations,
     )
 
-    month_labels = [f"Tháng {i}" for i in monthly_temp_df.index]
-    fig          = make_subplots(specs=[[{"secondary_y": False}]])
-    palette      = qualitative.Plotly
+    # ===== Chart 1: Tổng đóng góp =====
+    total = temp_df.sum()
+    percent = (total / total.sum() * 100)
 
-    station_names = monthly_temp_df.columns.to_numpy()
-    month_values  = monthly_temp_df.to_numpy()
-    rain_values   = monthly_rain_days_df.to_numpy()
-    sorted_idx    = np.argsort(month_values, axis=1)
+    fig1 = px.bar(
+        x=percent.values,
+        y=percent.index,
+        orientation="h",
+        labels={"x": "%", "y": "Station"},
+        title="Tổng đóng góp (%)"
+    )
 
-    sorted_station_names = station_names[sorted_idx]
-    sorted_temp_values   = np.take_along_axis(month_values, sorted_idx, axis=1)
-    sorted_rain_values   = np.take_along_axis(rain_values, sorted_idx, axis=1)
+    # ===== Chart 2: Stack theo tháng =====
+    percent_month = temp_df.div(temp_df.sum(axis=1), axis=0) * 100
 
-    for rank_idx in range(sorted_temp_values.shape[1] - 1, -1, -1):
-        rank_color = palette[rank_idx % len(palette)]
-        legend_group = f"rank_{rank_idx}"
-        rank_customdata = np.column_stack(
-            [
-                sorted_station_names[:, rank_idx],
-                sorted_rain_values[:, rank_idx],
-            ]
-        )
-        fig.add_bar(
-            x=month_labels,
-            y=sorted_temp_values[:, rank_idx],
-            name=station_names[rank_idx],
-            opacity=0.72,
-            marker={"color": rank_color},
-            legendgroup=legend_group,
-            customdata=rank_customdata,
-            hovertemplate="%{x}<br>Trạm: %{customdata[0]}<br>Nhiệt độ: %{y:.1f}<br>Số ngày mưa: %{customdata[1]}<extra></extra>",
-        )
-        fig.add_scatter(
-            x=month_labels,
-            y=sorted_temp_values[:, rank_idx],
+    fig2 = go.Figure()
+    for station in percent_month.columns:
+        fig2.add_trace(go.Scatter(
+            x=[f"Tháng {i}" for i in percent_month.index],
+            y=percent_month[station],
             mode="lines+markers",
-            marker={"color": rank_color, "size": 6},
-            line={"color": rank_color, "width": 2},
-            showlegend=False,
-            legendgroup=legend_group,
-            customdata=rank_customdata,
-            hovertemplate="%{x}<br>Trạm: %{customdata[0]}<br>Nhiệt độ: %{y:.1f}<br>Số ngày mưa: %{customdata[1]}<extra></extra>",
-        )
+            name=station,
+            hovertemplate="%{y:.2f}%<extra>%{fullData.name}</extra>"
+        ))
+
+    fig2.update_layout(
+        title="Đóng góp theo tháng (%)",
+        xaxis_title="Tháng",
+        yaxis_title="%",
+        hovermode="x unified"
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(fig1, width='stretch')
+    with col2:
+        st.plotly_chart(fig2, width='stretch')
+
+@st.cache_resource
+def render_monthly_station_chart(df, features, target_col, selected_stations):
+    temp_df, _, _ = prepare_monthly_station_data(
+        df=df,
+        features=features,
+        target_col=target_col,
+        selected_stations=selected_stations,
+    )
+
+    month_labels = [f"Tháng {i}" for i in temp_df.index]
+
+    fig = go.Figure()
+
+    for station in temp_df.columns:
+        fig.add_trace(go.Scatter(
+            x=month_labels,
+            y=temp_df[station],
+            mode="lines+markers",
+            name=station
+        ))
 
     fig.update_layout(
-        barmode="overlay",
-        title=f"Biểu đồ 12 tháng ({target_col})",
+        title=f"Biến động theo tháng ({target_col})",
         xaxis_title="Tháng",
-        yaxis_title=f"{target_col}",
-        legend_title="Thành phố",
-        legend={"groupclick": "togglegroup"},
-        hovermode="closest",
+        yaxis_title=target_col,
+        hovermode="x unified"
     )
 
-    st.plotly_chart(fig, use_container_width=True, key=f"monthly_stack_line_{target_col}")
-    
+    st.plotly_chart(fig, width='stretch')
 
 @st.cache_resource
-def render_station_geopandas_map(selected_station=None):
+def render_station_geopandas_map(selected_stations):
     import geopandas as gpd
-    selected_station_codes = _normalize_station_codes(selected_station)
-    if not selected_station_codes:
-        return
-
-    station_meta = load_station_summary()
+    
+    stations = httpx.get("http://127.0.0.1:8000/stations/all").json()
+    df = load_station_summary(stations=stations)
     gdf = gpd.GeoDataFrame(
-        station_meta,
-        geometry=gpd.points_from_xy(station_meta["longitude"], station_meta["latitude"]),
+        df,
+        geometry=gpd.points_from_xy(df["LONGITUDE"], df["LATITUDE"]),
         crs="EPSG:4326",
     )
-    region_map = {
-        "NB": "Đồng bằng sông Hồng",
-        "TH": "Bắc Trung Bộ",
-        "DH": "Bắc Trung Bộ",
-        "QN": "Duyên hải Nam Trung Bộ",
-        "TSN": "Đông Nam Bộ",
-        "CaMau": "Đồng bằng sông Cửu Long",
-    }
-    gdf["region"] = gdf["station"].map(region_map)
 
-    selected_rows = gdf[gdf["station"].isin(selected_station_codes)]
-    selected_regions = selected_rows["region"].dropna().unique().tolist()
-    if not selected_regions:
-        selected_regions = [region_map[s] for s in selected_station_codes if s in region_map]
-
-    selected_names = selected_rows["name"].tolist()
-    if not selected_names:
-        selected_names = selected_station_codes
+    shp_path = (Path(__file__).resolve().parents[2]
+                 / ".."
+                 / "Drafts"
+                 / "Temp Prediction"
+                 / "data"
+                 / "34_provinces_VN"
+                 / "34_provinces_VN.shp").resolve()
 
     fig, ax = plt.subplots(figsize=(6, 5))
 
-    shp_path = (
-        Path(__file__).resolve().parents[2]
-        / ".."
-        / "Drafts"
-        / "Temp Prediction"
-        / "data"
-        / "34_provinces_VN"
-        / "34_provinces_VN.shp"
-    ).resolve()
+    provinces = gpd.read_file(shp_path)
+    provinces.plot(ax=ax, color="#e5e7eb", edgecolor="#9ca3af", linewidth=0.4, alpha=0.35)
 
-    if shp_path.exists():
-        provinces = gpd.read_file(shp_path)
-        provinces = provinces.copy()
+    selected_names = [CODE_TO_NAME.get(s, s) for s in selected_stations]
+    selected_rows  = gdf[gdf["NAME"].isin(selected_names)]
+    unique_points  = selected_rows.groupby("NAME").first().reset_index()
 
-        province_region_map = {
-            **dict.fromkeys(["Hà Nội", "Hải Phòng", "Bắc Ninh", "Hưng Yên", "Quảng Ninh", "Ninh Bình"], "Đồng bằng sông Hồng"),
-            **dict.fromkeys(["Thanh Hóa", "Nghệ An", "Hà Tĩnh", "Quảng Trị", "Huế"], "Bắc Trung Bộ"),
-            **dict.fromkeys(["Đà Nẵng", "Quảng Ngãi", "Gia Lai", "Khánh Hoà", "Lâm Đồng", "Đắk Lắk"], "Duyên hải Nam Trung Bộ"),
-            **dict.fromkeys(["TP. Hồ Chí Minh", "Đồng Nai", "Tây Ninh"], "Đông Nam Bộ"),
-            **dict.fromkeys(["Cần Thơ", "An Giang", "Cà Mau", "Đồng Tháp", "Vĩnh Long"], "Đồng bằng sông Cửu Long"),
-        }
-        provinces["region"] = provinces["ten_tinh"].map(province_region_map)
+    # print("All Station Names:", df["NAME"].unique())
+    # print("Selected Stations:", selected_stations)
+    # print("Selected Station Names:", unique_points["NAME"].unique())
 
-        region_color_map = {
-            "Đồng bằng sông Hồng": "#3b82f6",
-            "Bắc Trung Bộ": "#10b981",
-            "Duyên hải Nam Trung Bộ": "#f59e0b",
-            "Đông Nam Bộ": "#ef4444",
-            "Đồng bằng sông Cửu Long": "#8b5cf6",
-        }
+    color   = ["red", "blue", "green", "orange", "purple", "cyan"]
+    labels  = []
 
-        # Chỉ tô màu khu vực thuộc trạm đã chọn, vùng khác để nền xám nhạt.
-        for region_name, region_df in provinces.groupby("region", dropna=False):
-            is_selected_region = region_name in selected_regions
-            region_df.plot(
-                ax=ax,
-                color=region_color_map.get(region_name, "#d1d5db") if is_selected_region else "#e5e7eb",
-                edgecolor="#b45309" if is_selected_region else "#9ca3af",
-                linewidth=1.6 if is_selected_region else 0.4,
-                alpha=0.95 if is_selected_region else 0.35,
-            )
-    else:
-        st.warning("Không tìm thấy shapefile bản đồ tỉnh thành.")
+    for i, row in unique_points.iterrows():
+        label = NORMALIZED_STATION_NAME.get(row["NAME"], row["NAME"])
 
-    color = ["red", "blue", "green", "orange", "purple", "cyan"]
-    # Đánh dấu vị trí trạm để liên kết trạm với khu vực trên bản đồ.
-    if not selected_rows.empty:
-        for idx, (_, station_point) in enumerate(selected_rows.iterrows()):
-            ax.scatter(
-                station_point["longitude"],
-                station_point["latitude"],
-                s=70,
-                c=color[idx % len(color)],
-                edgecolors="white",
-                linewidths=1.2,
-                zorder=5,
-                label=station_point["name"],
-            )
-        ax.legend(loc="lower right", frameon=True)
+        ax.scatter(
+            row["LONGITUDE"],
+            row["LATITUDE"],
+            s=70,
+            c=color[i % len(color)],
+            edgecolors="white",
+            linewidths=1.2,
+            zorder=5,
+            label=label
+        )
+        labels.append(label)
 
-    title_suffix = ", ".join(selected_names)
-    ax.set_title(f"Khu vực của trạm {title_suffix}", fontsize=10, loc="center")
+    formatted_title = '\n'.join([', '.join(labels[i:i+2]) for i in range(0, len(labels), 2)])
+
+    ax.set_title(f"Khu vực của trạm: {formatted_title}", fontsize=10, loc="center", weight="bold")
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.grid(alpha=0.25)
-    # ax.set_xlim(102, 111.5)
-    # ax.set_ylim(8, 23)
+    ax.legend(loc="lower right", frameon=True)
+
     st.pyplot(fig, width="stretch")
 
 @st.cache_resource
@@ -465,7 +320,7 @@ def gen_summary(station_codes, features, target, measure_unit, freq, date_filter
                         yaxis_title=feature_col,
                         legend_title="Trạm",
                     )
-                    st.plotly_chart(fig_line, use_container_width=True, key=f"line_{feature_col}_all_stations")
+                    st.plotly_chart(fig_line, width='stretch', key=f"line_{feature_col}_all_stations")
 
             with cols_plot[1]:
                 with st.expander(label="Scatter", expanded=True):
@@ -489,24 +344,15 @@ def gen_summary(station_codes, features, target, measure_unit, freq, date_filter
                         yaxis_title=target_col or "",
                         legend_title="Trạm",
                     )
-                    st.plotly_chart(fig_scatter, use_container_width=True, key=f"scatter_{feature_col}_all_stations")
-            
-def process(station, features, target, filter, freq):
-    station_codes = _normalize_station_codes(station)
+                    st.plotly_chart(fig_scatter, width='stretch', key=f"scatter_{feature_col}_all_stations")
 
-    stations_map = httpx.get("http://127.0.0.1:8000/stations/all").json()
-    selected_station = station_codes[0]
-    data_path = stations_map.get(selected_station)
-    if data_path is None:
-        st.warning("Không tìm thấy dữ liệu cho trạm đã chọn.")
-        return
+def process(station, features, target, filter, freq):
+
+    stations = httpx.get("http://127.0.0.1:8000/stations/all").json()
 
     measure_unit = httpx.get("http://127.0.0.1:8000/stations/measure_unit").json()
-    df           = pd.read_csv(data_path)
-    df["time"]   = pd.to_datetime(df["time"])
-    df           = df.set_index("time")
-    start, end = filter
-    df         = df.loc[start:end]
+
+    df_all = load_station_summary(stations, filter)
 
     rules = {}
     if "YEAR" in features:  rules.update({'YEAR': 'last'})
@@ -514,29 +360,34 @@ def process(station, features, target, filter, freq):
     if "DAY" in features:   rules.update({'DAY': 'last'})
     rules.update({col: 'mean' for col in features if col not in ['YEAR', "MONTH", "DAY"]})
 
-    selected_station_key = tuple(station_codes)
-
-    render_monthly_station_metrics(
-        filter,
-        target_col=target[0],
-        selected_stations=selected_station_key,
-    )
+    with st.container(border=True):
+        render_monthly_station_metrics(
+            df=df_all,
+            features=features,
+            target_col=target[0],
+            selected_stations=station
+        )
     
     render_monthly_station_chart(
-        filter,
+        df=df_all,
+        features=features,
         target_col=target[0],
-        selected_stations=selected_station_key,
+        selected_stations=station
     )
 
     render_monthly_contribution_charts(
-        filter,
+        df=df_all,
+        features=features,
         target_col=target[0],
-        selected_stations=selected_station_key,
+        selected_stations=station,
     )
 
-    st.dataframe(df[features].resample(freq).agg(rules))
+    # selected_names = [CODE_TO_NAME.get(s, s) for s in station] 
+    # df_filtered = df_all[df_all["NAME"].isin(selected_names)]
+    # df_result = df_filtered.groupby("NAME").resample(freq).agg(rules) 
+    # st.dataframe(df_result)
 
     with st.container(border=False):
         with st.expander(label    = "Summary",
-                         expanded = True):
-            gen_summary(station_codes, features, target, measure_unit, freq, filter)
+                        expanded = True):
+            gen_summary(station, features, target, measure_unit, freq, filter)
