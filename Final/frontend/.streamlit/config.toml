@@ -1,0 +1,15 @@
+# Cấu hình Streamlit cho dashboard TSF
+# Mục tiêu: ổn định kết nối websocket khi render nhiều biểu đồ nặng
+
+[server]
+# Cho phép message websocket lớn hơn mặc định (200 MB) -> tránh bị cắt/rớt khi payload lớn
+maxMessageSize = 2048
+# Bật nén websocket để giảm kích thước dữ liệu truyền qua kết nối
+enableWebsocketCompression = true
+# Không tự chạy lại khi lưu file (tránh rerun ngoài ý muốn giữa lúc đang tính toán)
+runOnSave = false
+
+[browser]
+# Tắt gửi thống kê sử dụng để giảm nhiễu mạng
+gatherUsageStats = false
+

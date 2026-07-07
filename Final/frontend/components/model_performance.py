@@ -1,10 +1,10 @@
 import streamlit as st
 import httpx
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
 import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
@@ -22,6 +22,15 @@ src_name = dict({"CaMau" : "Cà Mau",
                  "TH"    : "Thanh Hóa",
                  "TSN"   : "Tân Sơn Nhất"})
 
+# Tần suất resample cho từng chu kỳ -> mỗi step là 1 mốc thời gian tuần tự
+# (vd: 2 năm theo tháng = 24 step, 2 năm theo quý = 8 step)
+STEP_FREQ  = {"quarter": "Q", "month": "M"}
+STEP_TITLE = {"quarter": "Quarter", "month": "Month"}
+
+# Thứ tự và nhãn hiển thị của các metric (mỗi metric là 1 plot riêng)
+METRIC_ORDER = ["R2", "MAE", "MSE", "RMSE", "MAPE"]
+METRIC_TITLE = {"R2": "R2 (%)", "MAE": "MAE", "MSE": "MSE", "RMSE": "RMSE", "MAPE": "MAPE"}
+
 @st.cache_resource
 def gen_model_data(stations, model_data):
     reg_model = dict()
@@ -33,7 +42,6 @@ def gen_model_data(stations, model_data):
             reg_model[name] = joblib.load(model_data["model"][name])
         else: # DL
             # # Load lại wrapper
-            print(model_data["wrapper"][name])
             reg_model[name] = joblib.load(model_data["wrapper"][name])
             
             # # Load lại model
@@ -66,41 +74,26 @@ def gen_model_output(stations, output_data):
         station_pred[name].index = pd.to_datetime(station_pred[name].index)
     return station_fit, station_valid, station_pred
 
-@st.cache_resource
-def gen_feature_importance(stations, model_data, feature):
-    reg_model, _, _ = gen_model_data(stations, model_data)
-    
-    num_cols = len(stations)
+def gen_feature_importance(station, model_data, feature):
+    reg_model, _, _ = gen_model_data([station], model_data)
+    model = reg_model[station]
 
-    # Xác định số hàng và số cột hợp lý
-    ncols = 2  # Số biểu đồ trên mỗi hàng
-    nrows = int(np.ceil(num_cols / ncols))  # Tính số hàng cần thiết
+    # Chỉ model ML mới có feature importance
+    if not hasattr(model, "feature_importances_"):
+        st.info("Model này không hỗ trợ feature importance.")
+        return
 
-    fig, ax = plt.subplots(ncols              = ncols, 
-                           nrows              = nrows, 
-                           figsize            = (5*ncols, 4*nrows),
-                           constrained_layout = True)  # auto căn chỉnh
-    ax = ax.flatten()  # chuyển mảng 2 chiều thành 1 chiều để dễ duyệt
+    # Tạo dictionary feature importance
+    fi = dict({k: v for k, v in sorted(zip(feature,
+                                           model.feature_importances_),
+                                       key     = lambda x: x[1],
+                                       reverse = True)})
 
-    count = list(["a", "b", "c", "d", "e", "f"])
-    for i, name in enumerate(stations, 0):
-        
-        # Tạo dictionary feature importance
-        fi = dict({k: v for k,v in sorted(zip(feature,
-                                              reg_model[name].feature_importances_),
-                                          key     = lambda x : x[1],
-                                          reverse = True)})
-        
-        # Plot
-        sns.barplot(fi, orient='h', ax=ax[i])
-        ax[i].grid(True, axis='x')
-        ax[i].set_title(f"({count[i]}) {src_name[name]}")
-
-    fig.suptitle("Mức độ quan trọng của đặc trưng tại các trạm khí tượng", 
-                fontsize   = 15, 
-                fontweight = 'bold', 
-                ha         = 'center')
-    fig.tight_layout()
+    fig, ax = plt.subplots(figsize            = (6, 4),
+                           constrained_layout = True)
+    sns.barplot(fi, orient='h', ax=ax)
+    ax.grid(True, axis='x')
+    ax.set_title(f"Mức độ quan trọng của đặc trưng — {src_name.get(station, station)}")
     st.pyplot(fig)
 
 @st.cache_resource
@@ -184,7 +177,6 @@ def gen_evaluate_metrics(stations, model_data, output_data):
                                                              multioutput = "uniform_average")
     return r2, mae, mse, mape, rmse
 
-@st.cache_resource
 def gen_metric_dataframe(stations, model_data, output_data, metrics):
     r2, mae, mse, mape, rmse = gen_evaluate_metrics(stations, model_data, output_data)
     
@@ -219,7 +211,6 @@ def gen_metric_dataframe(stations, model_data, output_data, metrics):
 
     st.dataframe(data)
 
-@st.cache_resource
 def gen_actual_vs_predict(csv_path):
     df = pd.read_csv(csv_path, index_col="time")
     df.index = pd.to_datetime(df.index)
@@ -244,7 +235,7 @@ def gen_actual_vs_predict(csv_path):
                           xaxis_title = "Time",
                           yaxis_title = "Value",
                           hovermode   = "x unified")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=f"actual_vs_predict_line{csv_path}")
     with cols[1]:
         fig = px.scatter()
 
@@ -277,167 +268,143 @@ def gen_actual_vs_predict(csv_path):
                          spikethickness = 1,
                          spikedash      = "dot")
 
-        st.plotly_chart(fig, use_container_width=True)
-                
-def gen_summary(stations, output_data, avp):
-    for name in stations:
-        with st.expander(label    = name,
-                         expanded = True):
-            with st.expander(label    = "Train",
-                             expanded = False):
-                if avp:
-                    gen_actual_vs_predict(output_data[name][".csv"]["train"])
-            with st.expander(label    = "Valid",
-                             expanded = False):
-                if avp:
-                    gen_actual_vs_predict(output_data[name][".csv"]["valid"])
-            with st.expander(label    = "Test",
-                             expanded = False):
-                if avp:
-                    gen_actual_vs_predict(output_data[name][".csv"]["test"])
+        st.plotly_chart(fig, use_container_width=True, key=f"actual_vs_predict_scatter{csv_path}")
 
-def _metric_orientation(metric_name):
-    return False if metric_name == "R2" else True
+def gen_actual_vs_predict_sets(output_data, station):
+    """Vẽ Actual vs Predict cho cả 3 tập train/valid/test của 1 trạm."""
+    for split, label in (("train", "Train"), ("valid", "Valid"), ("test", "Test")):
+        with st.expander(label=label, expanded=False):
+            gen_actual_vs_predict(output_data[station][".csv"][split])
 
-def gen_periodic_metric_ranking(stations, output_data, metrics, cycle_types=None):
-    if not metrics:
-        st.info("Chưa chọn metrics để ranking.")
-        return
+@st.cache_resource
+def _step_metrics(station, output_data, cycle_type, metrics, split):
+    """Tính metric theo từng step thời gian tuần tự cho 1 tập (train/valid/test).
 
-    if not cycle_types:
-        st.info("Chưa chọn chu kỳ thời gian để ranking.")
-        return
+    Mỗi step là 1 mốc thời gian (year-month hoặc year-quarter): vd 5 năm theo
+    tháng -> 60 step, theo quý -> 20 step.
+    """
+    df = pd.read_csv(output_data[station][".csv"][split])
+    if not {"time", "y_true", "y_pred"}.issubset(df.columns):
+        return pd.DataFrame()
+
+    df = df[["time", "y_true", "y_pred"]].copy()
+    df["time"] = pd.to_datetime(df["time"], errors="coerce")
+    df = df.dropna(subset=["time", "y_true", "y_pred"])
+    if df.empty:
+        return pd.DataFrame()
+
+    df["step"] = df["time"].dt.to_period(STEP_FREQ[cycle_type])
 
     rows = []
+    for step_value, g in df.groupby("step", sort=True):
+        y_true, y_pred = g["y_true"], g["y_pred"]
+        row = {"step": str(step_value)}
+        if "R2" in metrics:
+            row["R2"]   = r2_score(y_true, y_pred, multioutput="uniform_average") * 100
+        if "MAE" in metrics:
+            row["MAE"]  = mean_absolute_error(y_true, y_pred, multioutput="uniform_average")
+        if "MSE" in metrics:
+            row["MSE"]  = mean_squared_error(y_true, y_pred, multioutput="uniform_average")
+        if "RMSE" in metrics:
+            row["RMSE"] = root_mean_squared_error(y_true, y_pred, multioutput="uniform_average")
+        if "MAPE" in metrics:
+            row["MAPE"] = mean_absolute_percentage_error(y_true, y_pred, multioutput="uniform_average")
+        rows.append(row)
 
-    for station in stations:
-        test_path = output_data[station][".csv"]["test"]
-        df = pd.read_csv(test_path)
+    return pd.DataFrame(rows)
 
-        if not {"time", "y_true", "y_pred"}.issubset(df.columns):
+def _single_metric_chart(metric, per_model, color_of):
+    fig = go.Figure()
+    for model, table in per_model.items():
+        if metric not in table.columns:
             continue
+        fig.add_scatter(x=table["step"].astype(str),
+                        y=table[metric],
+                        mode="lines+markers",
+                        name=model,
+                        line=dict(color=color_of[model]))
+    fig.update_layout(title=METRIC_TITLE[metric], xaxis_title="Step",
+                      yaxis_title=METRIC_TITLE[metric], hovermode="x unified")
+    # Giữ thứ tự step theo thời gian (không để plotly sắp xếp lại)
+    fig.update_xaxes(type="category")
+    return fig
 
-        df["time"] = pd.to_datetime(df["time"], errors="coerce")
-        df = df.dropna(subset=["time", "y_true", "y_pred"]).copy()
-        if df.empty:
-            continue
+def gen_station_ranking(station, models, all_output, metrics, cycle_types, color_of):
+    """5 hình so sánh model (mỗi metric 1 plot) cho 1 trạm, x là step thời gian.
 
-        df["weekday"] = df["time"].dt.day_name()
-        df["quarter"] = "Q" + df["time"].dt.quarter.astype(str)
-        df["month"]   = df["time"].dt.month
-        print(df)
-        cycle_map = {
-            "weekday": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-            "quarter": ["Q1", "Q2", "Q3", "Q4"],
-            "month": list(range(1, 13)),
-        }
-
-        for cycle_type in cycle_types:
-            if cycle_type not in cycle_map:
-                continue
-
-            ordered_values = cycle_map[cycle_type]
-            for cycle_value in ordered_values:
-                g = df[df[cycle_type] == cycle_value]
-                if g.empty:
-                    continue
-
-                row = {
-                    "cycle_type": cycle_type,
-                    "cycle": cycle_value,
-                    "station": station,
-                    "samples": len(g),
-                }
-
-                y_true = g["y_true"]
-                y_pred = g["y_pred"]
-
-                if "R2" in metrics:
-                    row["R2"] = r2_score(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average") * 100
-                if "MAE" in metrics:
-                    row["MAE"] = mean_absolute_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
-                if "MSE" in metrics:
-                    row["MSE"] = mean_squared_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
-                if "RMSE" in metrics:
-                    row["RMSE"] = root_mean_squared_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
-                if "MAPE" in metrics:
-                    row["MAPE"] = mean_absolute_percentage_error(y_true=y_true, y_pred=y_pred, multioutput = "uniform_average")
-
-                rows.append(row)
-
-    ranking = pd.DataFrame(rows)
-    if ranking.empty:
-        st.info("Không đủ dữ liệu để tạo ranking theo chu kỳ đã chọn.")
+    Chia theo từng tập train/valid/test (mỗi tập 1 expander) giống Actual vs
+    Predict; trong mỗi tập lại chia theo chu kỳ (tháng/quý).
+    """
+    if not metrics or not cycle_types:
         return
 
-    ranking["cycle"] = ranking.apply(
-        lambda r: f"M{int(r['cycle']):02d}" if r["cycle_type"] == "month" else r["cycle"],
-        axis=1,
-    )
+    ordered_metrics = [m for m in METRIC_ORDER if m in metrics]
 
-    rank_cols = []
-    for metric_name in metrics:
-        if metric_name not in ranking.columns:
-            continue
+    for split, label in (("train", "Train"), ("valid", "Valid"), ("test", "Test")):
+        with st.expander(label=label, expanded=False):
+            for cycle_type in cycle_types:
+                if cycle_type not in STEP_FREQ:
+                    continue
 
-        ascending = _metric_orientation(metric_name)
-        rank_col = f"rank_{metric_name}"
-        ranking[rank_col] = ranking.groupby(["cycle_type", "cycle"])[metric_name].rank(
-            ascending=ascending,
-            method="min"
-        )
-        rank_cols.append(rank_col)
+                per_model = {}
+                for model in models:
+                    table = _step_metrics(station, all_output[model], cycle_type, metrics, split)
+                    if not table.empty:
+                        per_model[model] = table
+                if not per_model:
+                    continue
 
-    if rank_cols:
-        ranking["rank_score"] = ranking[rank_cols].mean(axis=1)
-        ranking["rank_overall"] = ranking.groupby(["cycle_type", "cycle"])["rank_score"].rank(
-            ascending=True,
-            method="min",
-        )
-    else:
-        ranking["rank_score"] = np.nan
-        ranking["rank_overall"] = np.nan
+                # Mỗi chu kỳ (tháng / quý) là 1 expander con
+                with st.expander(label=STEP_TITLE[cycle_type], expanded=False):
+                    cols = st.columns(2)
+                    for i, metric in enumerate(ordered_metrics):
+                        with cols[i % 2]:
+                            fig = _single_metric_chart(metric, per_model, color_of)
+                            st.plotly_chart(fig, use_container_width=True, key=f"{station}_{split}_{cycle_type}_{metric}")
 
-    for metric_name in metrics:
-        if metric_name in ranking.columns:
-            digits = 4 if metric_name != "R2" else 4
-            ranking[metric_name] = ranking[metric_name].round(digits)
-
-    if "rank_score" in ranking.columns:
-        ranking["rank_score"] = ranking["rank_score"].round(3)
-
-    for col in ["samples", "rank_overall"] + rank_cols:
-        if col in ranking.columns:
-            ranking[col] = ranking[col].astype("Int64")
-
-    ranking = ranking.sort_values(["cycle_type", "cycle", "rank_overall", "station"])
-    st.dataframe(ranking)
-            
-def process(model, stations, charts, metrics, feature, cycle_ranking=None):
-    output_data = httpx.get("http://127.0.0.1:8000/stations/model_predict").json()[model]
-    model_data  = httpx.get("http://127.0.0.1:8000/models/all").json()[model]
+def process(models, stations, charts, metrics, feature, cycle_ranking=None):
+    all_output = httpx.get("http://127.0.0.1:8000/stations/model_predict").json()
+    all_model  = httpx.get("http://127.0.0.1:8000/models/all").json()
 
     cycle_label_map = {
-        "Theo quý": "quarter",
-        "Theo thứ": "weekday",
-        "Theo tháng": "month",
+        "Quarter": "quarter",
+        "Month": "month",
     }
     selected_cycles = []
     for cycle in (cycle_ranking or []):
-        if cycle in ["quarter", "weekday", "month"]:
+        if cycle in ["quarter", "month"]:
             selected_cycles.append(cycle)
         elif cycle in cycle_label_map:
             selected_cycles.append(cycle_label_map[cycle])
-    
-    gen_metric_dataframe(stations, model_data, output_data, metrics)
 
-    gen_periodic_metric_ranking(stations, output_data, metrics, selected_cycles)
-    
-    if "Feature Importance" in charts:
-        gen_feature_importance(stations, model_data, feature)
-    
-    with st.container(border=False):
-        with st.expander(label    = "Summary",
-                         expanded = True):
-            gen_summary(stations, output_data, 
-                        avp = True if "Actual vs Predict" in charts else None)
+    palette  = px.colors.qualitative.Plotly
+    color_of = {m: palette[i % len(palette)] for i, m in enumerate(models)}
+
+    # Mỗi khu vực (trạm) là 1 expander chứa các expander con
+    for station in stations:
+        with st.expander(label=src_name.get(station, station), expanded=False):
+
+            # Metric -> expander theo model
+            with st.expander(label="Metric", expanded=False):
+                for model in models:
+                    with st.expander(label=model, expanded=False):
+                        gen_metric_dataframe([station], all_model[model], all_output[model], metrics)
+
+            # Feature Importance -> expander theo model
+            if "Feature Importance" in charts:
+                with st.expander(label="Feature Importance", expanded=False):
+                    for model in models:
+                        with st.expander(label=model, expanded=False):
+                            gen_feature_importance(station, all_model[model], feature)
+
+            # Actual vs Predict -> expander theo model
+            if "Actual vs Predict" in charts:
+                with st.expander(label="Actual vs Predict", expanded=False):
+                    for model in models:
+                        with st.expander(label=model, expanded=False):
+                            gen_actual_vs_predict_sets(all_output[model], station)
+
+            # Cycle Ranking -> expander, trong đó mỗi chu kỳ (tháng/quý) 1 expander
+            with st.expander(label="Cycle Ranking", expanded=False):
+                gen_station_ranking(station, models, all_output, metrics,
+                                    selected_cycles, color_of)

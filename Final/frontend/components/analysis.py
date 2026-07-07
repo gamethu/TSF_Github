@@ -24,6 +24,7 @@ CODE_TO_NAME = {
     "CaMau": "CA MAU",
 }
 
+@st.cache_resource
 def _normalize_station_codes(station):
     if station is None:
         return []
@@ -43,6 +44,7 @@ def load_station_summary(stations, filter=None):
 
     return pd.concat(dfs)
 
+@st.cache_resource
 def prepare_monthly_station_data(df, features, target_col, selected_stations=None):
     selected_names = [CODE_TO_NAME.get(s, s) for s in selected_stations]
     # selected_rows  = gdf[gdf["NAME"].isin(selected_names)]

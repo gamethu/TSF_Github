@@ -172,6 +172,7 @@ def predict_result(df_predict, model_list, start, end):
 
     return pd.DataFrame(res, index=pred_df.index).loc[start:end]
 
+@st.cache_resource
 def gen_overview(overview_rows):
     if not overview_rows:
         return

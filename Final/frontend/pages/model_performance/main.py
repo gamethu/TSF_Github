@@ -1,6 +1,5 @@
 import streamlit as st
 from components import model_performance
-from datetime import date
 import httpx
 
 def display():
@@ -11,22 +10,20 @@ def display():
                     'sp_ave', 'tcc_ave', 'tp_sum','ws_ave', 'wd_ave',
                     ])
     chart   = ["Actual vs Predict",
-               "Feature Importance",
-               "Partial Dependence Plots"]
+               "Feature Importance"]
     metric  = ["R2", "MAE", "MSE", "RMSE", "MAPE"]
-    cycle_opts = ["quarter", "weekday", "month"]
+    cycle_opts = ["quarter", "month"]
     
     with st.sidebar:
         with st.container(border=True):
             st.markdown("<h1>Dashboard</h1>",unsafe_allow_html=True)
             st.markdown("<h2>Dataset</h2>",unsafe_allow_html=True)
-            model = st.selectbox(label       = "Model",
-                                 index       = None,
-                                 options     = httpx.get("http://127.0.0.1:8000/models/name").json(),
-                                 key         = "model",
-                                 placeholder = "Choose your model")
+            models = st.multiselect(label       = "Model",
+                                    options     = httpx.get("http://127.0.0.1:8000/models/name").json(),
+                                    key         = "model",
+                                    placeholder = "Choose your model(s)")
             stations = None
-            if model:
+            if models:
                 stations = st.multiselect(label      = "Station",
                                           options     = station,
                                           default     = station,
@@ -48,13 +45,13 @@ def display():
                                                    options     = cycle_opts,
                                                    default     = cycle_opts,
                                                    placeholder = "Choose cycle ranking")
-                
+
             submitted = st.button("Submit")
-        
+
     if submitted:
-        if model is None or stations is None or charts is None:
+        if not models or not stations or not charts:
             st.warning("Please provide all requirement")
-        else: 
-            model_performance.process(model, stations, charts, metrics, feature, cycle_ranking)
+        else:
+            model_performance.process(models, stations, charts, metrics, feature, cycle_ranking)
     
 display()
